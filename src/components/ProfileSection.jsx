@@ -64,20 +64,15 @@ function ProfileSection({ onAvatarUpdated, requirements = [] }) {
     setUploadError("");
 
     try {
-      const imageData = new FormData();
-      imageData.append("image", pendingAvatarFile);
-      imageData.append("folder", "student-profiles");
-      const uploadResponse = await apiClient.post("cloudinary/", imageData);
-      const uploadedImage = uploadResponse.data?.data ?? uploadResponse.data;
-      if (typeof uploadedImage?.secure_url !== "string" || !uploadedImage.secure_url) {
-        throw new Error("The image service did not return an image URL.");
+      const profileData = new FormData();
+      profileData.append("profile", pendingAvatarFile);
+      const profileResponse = await apiClient.patch("me/update/", profileData);
+      const updatedProfile = profileResponse.data?.data ?? profileResponse.data;
+      const profileUrl = updatedProfile?.profile_url ?? updatedProfile?.profile;
+      if (typeof profileUrl !== "string" || !profileUrl) {
+        throw new Error("The profile update response did not include a profile image URL.");
       }
 
-      const profileResponse = await apiClient.patch("me/update/", {
-        profile: uploadedImage.secure_url,
-      });
-      const updatedProfile = profileResponse.data?.data ?? profileResponse.data;
-      const profileUrl = updatedProfile?.profile_url ?? uploadedImage.secure_url;
       setProfile((currentProfile) => ({ ...currentProfile, ...updatedProfile }));
       setAvatarPreview(profileUrl);
       onAvatarUpdated?.(profileUrl);
