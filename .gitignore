@@ -3,3 +3,5 @@ dist/
 .env
 .env.*
 !.env.example
+/FRONTEND_INTEGRATION_GUIDE.pdf
+/GOOGLE_SIGN_IN_SETUP.md
