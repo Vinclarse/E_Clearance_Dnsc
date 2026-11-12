@@ -40,6 +40,8 @@ The homepage is served at `/`, sign-in at `/login`, and the authenticated studen
 
 API requests use a same-origin proxy to avoid browser CORS failures: Vite proxies `/api` during local development, and the Vercel rewrite proxies it when deployed on Vercel. For a different deployment host, configure an equivalent proxy or have the API allow that frontend origin in its CORS settings. `VITE_API_BASE_URL` is an optional override; using the API's direct origin requires the API to allow the frontend's origin.
 
+The API client leaves `Content-Type` to Axios so JSON requests are encoded normally and `FormData` uploads receive the browser-generated multipart boundary required by the API.
+
 The student dashboard uses the documented `/me/`, `/student-clearances/my-clearances/`, and `/student-clearance-items/?student_clearance=<id>` endpoints. It follows the clearance-items pagination links so the dashboard shows the complete checklist, not just the first page. It also uses `/notifications/`, `/notifications/mark-all-read/`, `/cloudinary/`, and `/me/update/` for the features shown in the dashboard. Password recovery uses `/password-reset/request/`, `/password-reset/verify/`, and `/password-reset/change/`. Access tokens are refreshed through `/token/refresh/`, and sign-out revokes the refresh token through `/logout/`.
 
 ## Google sign-in setup
