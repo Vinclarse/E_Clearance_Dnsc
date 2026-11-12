@@ -1,6 +1,24 @@
 import { useState, useEffect } from "react";
 import apiClient from "../services/api";
 
+function getProfileUpdateErrorMessage(error) {
+  const responseData = error.response?.data;
+  const errorData = responseData?.data ?? responseData;
+  const errors = errorData?.errors ?? responseData?.errors;
+  const fieldError = Object.values(errors ?? {})
+    .flat()
+    .find((value) => typeof value === "string");
+  const message =
+    errorData?.detail ??
+    errors?.detail ??
+    fieldError ??
+    errorData?.error ??
+    (responseData?.message !== "Error" ? responseData?.message : undefined);
+
+  if (typeof message === "string") return message;
+  return error.message || "Could not update your profile image.";
+}
+
 function ProfileSection({ onAvatarUpdated, requirements = [] }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +89,7 @@ function ProfileSection({ onAvatarUpdated, requirements = [] }) {
       setTimeout(() => setShowToast(false), 4000);
     } catch (error) {
       console.error("Failed to update profile image:", error);
-      setUploadError(error.response?.data?.detail ?? error.message ?? "Could not update your profile image.");
+      setUploadError(getProfileUpdateErrorMessage(error));
     } finally {
       setIsUploading(false);
     }
