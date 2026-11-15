@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import apiClient from './services/api.js'
@@ -23,6 +23,8 @@ import statusCompleted from './assets/status-completed.svg'
 import statusProgress from './assets/status-in-progress.svg'
 import statusPending from './assets/status-pending.svg'
 import statusRejected from './assets/status-rejected.svg'
+
+const AdminPortal = lazy(() => import('./AdminPortal.jsx'))
 
 const processSteps = [
   {
@@ -152,6 +154,13 @@ function getLoginErrorMessage(error) {
   return error.message || 'Sign-in failed. Please try again.'
 }
 
+function getPostLoginPath() {
+  const requestedPath = new URLSearchParams(window.location.search).get('next')
+  return requestedPath === '/admin' || requestedPath?.startsWith('/admin/')
+    ? requestedPath
+    : '/dashboard'
+}
+
 function PasswordResetForm({ onCancel, onComplete }) {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
@@ -260,7 +269,7 @@ function LoginPage() {
     try {
       const response = await apiClient.post('login/', { username, password })
       storeAuthTokens(response.data)
-      window.location.assign('/dashboard')
+      window.location.assign(getPostLoginPath())
     } catch (error) {
       setLoginMessage(getLoginErrorMessage(error))
     } finally {
@@ -282,7 +291,7 @@ function LoginPage() {
         token: credentialResponse.credential,
       })
       storeAuthTokens(response.data)
-      window.location.assign('/dashboard')
+      window.location.assign(getPostLoginPath())
     } catch (error) {
       setLoginMessage(getLoginErrorMessage(error))
     } finally {
@@ -456,6 +465,10 @@ function LoginPage() {
             <img src={shieldCheck} alt="" aria-hidden="true" />
             Your account information should remain private.
           </p>
+          <a className="login-home-link" href="/login?next=%2Fadmin">
+            <img src={arrowRight} alt="" aria-hidden="true" />
+            Administrator? Sign in for the admin portal
+          </a>
           <a className="login-home-link" href="/">
             <img src={arrowRight} alt="" aria-hidden="true" />
             Back to homepage
@@ -705,20 +718,36 @@ function SectionHeading({ eyebrow, title, description, titleId }) {
 }
 
 function App() {
-  const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
+  const [currentPath, setCurrentPath] = useState(
+    () => window.location.pathname.replace(/\/+$/, '') || '/',
+  )
   const isLoginPage = currentPath === '/login'
   const isDashboardPage = currentPath === '/dashboard'
+  const isAdminPage = currentPath === '/admin' || currentPath.startsWith('/admin/')
   const hasAuthToken = Boolean(localStorage.getItem('auth_token'))
   const isDesignPreview =
     new URLSearchParams(window.location.search).get('preview') === 'true'
 
   useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname.replace(/\/+$/, '') || '/')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (isAdminPage && !hasAuthToken) {
+      window.location.replace(`/login?next=${encodeURIComponent(currentPath)}`)
+      return
+    }
     if (isDashboardPage && !hasAuthToken && !isDesignPreview) {
       window.location.replace('/login')
       return
     }
     if (isLoginPage && hasAuthToken) {
-      window.location.replace('/dashboard')
+      window.location.replace(getPostLoginPath())
       return
     }
 
@@ -726,9 +755,18 @@ function App() {
       ? 'Account Access | ClearanceDNSC'
       : isDashboardPage
         ? 'Student Dashboard | ClearanceDNSC'
-        : 'ClearanceDNSC | Student Clearance, Simplified'
-  }, [hasAuthToken, isDashboardPage, isDesignPreview, isLoginPage])
+        : isAdminPage
+          ? 'Admin Portal | ClearanceDNSC'
+          : 'ClearanceDNSC | Student Clearance, Simplified'
+  }, [currentPath, hasAuthToken, isAdminPage, isDashboardPage, isDesignPreview, isLoginPage])
 
+  if (isAdminPage) {
+    return hasAuthToken ? (
+      <Suspense fallback={<div role="status">Loading admin portal…</div>}>
+        <AdminPortal />
+      </Suspense>
+    ) : null
+  }
   if (isDashboardPage) {
     return hasAuthToken || isDesignPreview ? <StudentDashboard /> : null
   }

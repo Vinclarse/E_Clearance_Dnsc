@@ -1,0 +1,549 @@
+/* ═══════════════════════════════════════════
+   Clearance Templates  –  New Design (v2)
+   ═══════════════════════════════════════════ */
+
+.ct-page {
+  padding: 24px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ══ Template Config Card ══ */
+.ct-config-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 20px 24px 22px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.ct-config-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.ct-config-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ct-config-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ct-draft-badge {
+  background: #f0ede5;
+  color: #8a7a60;
+  border: 1px solid #ddd9d0;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ct-btn-save-draft {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.ct-btn-save-draft:hover {
+  border-color: var(--accent-olive);
+  background: rgba(107,140,58,0.05);
+}
+
+/* Form row */
+.ct-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.ct-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.ct-field-wide {
+  flex: 2.5;
+  min-width: 200px;
+}
+
+.ct-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.ct-text-input {
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ct-text-input:focus { border-color: var(--accent-olive); }
+
+.ct-select {
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 32px 9px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7560' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ct-select:focus { border-color: var(--accent-olive); }
+
+/* Year levels */
+.ct-year-levels-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 2.5;
+  min-width: 240px;
+}
+
+.ct-year-checkboxes {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ct-year-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 7px 14px;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.ct-year-chip.checked {
+  border-color: var(--bg-navbar);
+  background: var(--bg-navbar);
+  color: #fff;
+}
+
+.ct-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ══ Two-column layout ══ */
+.ct-two-col {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ══ Sequence Builder Card ══ */
+.ct-builder-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 22px 22px 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.ct-builder-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.ct-builder-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 3px;
+}
+
+.ct-builder-sub {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.ct-reorder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-page);
+  border: 1.5px solid var(--border-color);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.ct-reorder-btn:hover {
+  border-color: var(--accent-olive);
+  color: var(--text-primary);
+}
+
+/* Steps */
+.ct-steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.ct-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.12s;
+}
+.ct-step:last-child { border-bottom: none; }
+.ct-step:hover {
+  background: #fafaf8;
+  border-radius: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.ct-drag-handle {
+  color: #ccc8be;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.ct-drag-handle:hover { color: #999; }
+.ct-drag-handle:active { cursor: grabbing; }
+
+.ct-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2d3a1e;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(45,58,30,0.25);
+}
+
+.ct-step-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+
+.ct-step-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.ct-step-role-block {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-color);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #fff;
+}
+
+.ct-step-role-label {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ct-step-role-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.ct-step-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 72px;
+  justify-content: flex-end;
+}
+
+.ct-lock-icon {
+  color: var(--text-secondary);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.ct-step-note-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Builder footer */
+.ct-builder-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ct-step-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ct-check-icon { color: #5a7a3a; }
+
+.ct-btn-save-seq {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 7px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.ct-btn-save-seq:hover {
+  border-color: var(--accent-olive);
+  background: rgba(107,140,58,0.05);
+}
+
+/* ══ Preview Card (dark) ══ */
+.ct-preview-card {
+  background: #2d3a1e;
+  border-radius: 14px;
+  padding: 22px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 4px 20px rgba(45,58,30,0.25);
+}
+
+.ct-preview-ready {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(212,230,176,0.6);
+  margin: 0 0 10px;
+}
+
+.ct-preview-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 3px;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+}
+
+.ct-preview-sub {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 16px;
+}
+
+.ct-preview-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin-bottom: 14px;
+}
+
+.ct-preview-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 20px;
+}
+
+.ct-preview-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ct-preview-info-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+.ct-preview-info-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  text-align: right;
+}
+
+/* Eligible students */
+.ct-preview-eligible-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ct-preview-eligible-num {
+  font-size: 42px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.ct-preview-eligible-label {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.4;
+}
+
+/* Year bars grid */
+.ct-preview-bars-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-bottom: 20px;
+}
+
+.ct-preview-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ct-preview-bar-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ct-preview-bar-label {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.5);
+}
+
+.ct-preview-bar-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+}
+
+.ct-preview-bar-track {
+  height: 5px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ct-preview-bar-fill {
+  height: 100%;
+  background: #7aab5a;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Issue button */
+.ct-preview-issue-btn {
+  width: 100%;
+  background: rgba(122,171,90,0.3);
+  border: 1.5px solid rgba(122,171,90,0.5);
+  border-radius: 10px;
+  color: #d4e6b0;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+.ct-preview-issue-btn:hover {
+  background: rgba(122,171,90,0.45);
+  border-color: rgba(122,171,90,0.7);
+}
+
+/* Footer note */
+.ct-preview-note {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  line-height: 1.6;
+  text-align: center;
+  margin: 0;
+}
