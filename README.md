@@ -26,8 +26,10 @@ Available scripts:
 ├── public/
 ├── src/
 │   ├── App.jsx       # Landing page, sign-in, and route handling
+│   ├── AdminPortal.jsx # Mounts the administrator portal at /admin
 │   ├── App.css       # Shared page styles
 │   ├── index.css     # Stylesheet entry point
+│   ├── admin/        # Administrator portal screens and styles
 │   ├── components/   # Student dashboard components
 │   ├── pages/        # Student dashboard page
 │   ├── services/     # API client and authentication
@@ -37,6 +39,8 @@ Available scripts:
 ```
 
 The homepage is served at `/`, sign-in at `/login`, and the authenticated student dashboard at `/dashboard`. Sign-in sends the API's documented `username` and `password` fields to `POST /api/v1/login/`; use the username assigned to the account (an email works only if it is also that account's username). Successful access and refresh tokens are saved for authenticated API requests. Unauthenticated visits to `/dashboard` are redirected to `/login`.
+
+The administrator portal is available at `/admin` after signing in, with pages for the executive dashboard, clearance templates, student directory, signatory roles, audit logs, profile, and settings. The current portal screens use sample data and are not connected to the E-Clearance API; wire these views to supported API endpoints and enforce administrator permissions on the server before using them with live records.
 
 API requests use a same-origin proxy to avoid browser CORS failures: Vite proxies `/api` during local development, and the Vercel rewrite proxies it when deployed on Vercel. For a different deployment host, configure an equivalent proxy or have the API allow that frontend origin in its CORS settings. `VITE_API_BASE_URL` is an optional override; using the API's direct origin requires the API to allow the frontend's origin.
 

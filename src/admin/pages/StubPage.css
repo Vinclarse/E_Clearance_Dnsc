@@ -1,0 +1,68 @@
+.stub-page {
+  padding: 24px 32px;
+}
+
+.stub-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: 60px 40px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 12px;
+  text-align: center;
+}
+
+.stub-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--bg-page);
+  border: 1.5px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.stub-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stub-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+.stub-table-placeholder {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 600px;
+  border: 1.5px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stub-table-row {
+  height: 32px;
+  background: var(--bg-page);
+  border-radius: 6px;
+}
+
+.stub-table-row-header {
+  height: 36px;
+  background: #eceae3;
+  border-radius: 6px;
+}

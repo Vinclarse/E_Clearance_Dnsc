@@ -1,0 +1,419 @@
+.dashboard-layout {
+  display: flex;
+  gap: 20px;
+  padding: 20px 28px 32px;
+  align-items: flex-start;
+  min-height: calc(100vh - 80px);
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ── Top row ── */
+.dashboard-top-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+/* ── Status Distribution Card ── */
+.status-dist-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 22px 24px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.status-dist-card h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.status-dist-subtitle {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* Body: donut left, list right */
+.status-dist-body {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+/* Left side: donut + label */
+.status-dist-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.donut-svg {
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.08));
+}
+
+.status-dist-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.status-dist-total-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.status-dist-total-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ── Status list (right side) ── */
+.status-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-name {
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-weight: 500;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+/* Progress bar — sits between name and count */
+.status-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: #ece9e1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.status-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.status-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.status-percent {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  min-width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Stat cards 2×2 ── */
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-content: start;
+  height: 100%;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 110px;
+}
+
+/* All 4 borders are TOP — uniform position */
+.stat-card.border-top-dark-green {
+  border-top: 3px solid #2d5a1e;
+}
+
+.stat-card.border-top-light-green {
+  border-top: 3px solid #7ab648;
+}
+
+.stat-card.border-top-red {
+  border-top: 3px solid #c43a3a;
+}
+
+.stat-card.border-top-blue {
+  border-top: 3px solid #4a7cb8;
+}
+
+.stat-card-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.stat-card-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.stat-card-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ── Office Bottleneck Card ── */
+.bottleneck-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.bottleneck-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.bottleneck-header-left h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.bottleneck-subtitle {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.bottleneck-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Bar rows */
+.bottleneck-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.bottleneck-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bottleneck-office-name {
+  font-size: 12.5px;
+  color: var(--text-primary);
+  width: 110px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.bottleneck-bar-wrap {
+  flex: 1;
+  height: 20px;
+  background: #ece9e1;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+.bottleneck-bar-green {
+  height: 100%;
+  background: var(--bar-green);
+  transition: width 0.5s ease;
+}
+
+.bottleneck-bar-red {
+  height: 100%;
+  background: var(--bar-red);
+  transition: width 0.5s ease;
+}
+
+.bottleneck-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.bottleneck-total {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bottleneck-badge {
+  background: #fff0e0;
+  color: #a05020;
+  border: 1px solid #f0d0a0;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dashboard-loading {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dashboard-banner {
+  background: #fff5f5;
+  color: #8a2a2a;
+  border: 1px solid #f0c8c8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.bottleneck-empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .dashboard-top-row {
+    grid-template-columns: 1fr;
+  }
+  .stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  .dashboard-layout .sidebar-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-layout {
+    padding: 12px 12px 28px;
+    gap: 14px;
+  }
+  .dashboard-main {
+    order: -1;
+  }
+  .status-dist-card,
+  .bottleneck-card {
+    padding: 16px;
+  }
+  .status-dist-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .status-list-item {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr) auto auto;
+    column-gap: 8px;
+    row-gap: 6px;
+    align-items: center;
+  }
+  .status-dot { grid-column: 1; grid-row: 1; }
+  .status-name { grid-column: 2; grid-row: 1; width: auto; }
+  .status-count { grid-column: 3; grid-row: 1; }
+  .status-percent { grid-column: 4; grid-row: 1; }
+  .status-bar-wrap { grid-column: 2 / -1; grid-row: 2; }
+  .stat-cards-grid {
+    gap: 10px;
+  }
+  .stat-card {
+    min-height: 0;
+    padding: 14px;
+  }
+  .stat-card-value {
+    font-size: 24px;
+  }
+  .bottleneck-header,
+  .bottleneck-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .bottleneck-legend,
+  .bottleneck-row-right {
+    flex-wrap: wrap;
+  }
+  .bottleneck-office-name,
+  .bottleneck-bar-wrap,
+  .bottleneck-row-right {
+    width: 100%;
+    min-width: 0;
+  }
+  .bottleneck-badge {
+    white-space: normal;
+  }
+}

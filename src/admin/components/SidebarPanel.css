@@ -1,0 +1,324 @@
+.sidebar-panel {
+  width: 280px;
+  min-width: 280px;
+  max-width: 100%;
+  background: var(--bg-sidebar);
+  border-radius: 18px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  color: var(--text-on-dark);
+  box-shadow: var(--shadow-md);
+}
+
+/* Term header */
+.sidebar-term-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sidebar-term-label span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-on-dark-muted);
+}
+
+.sidebar-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(90,122,58,0.35);
+  color: #a8d070;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sidebar-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a8d070;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.sidebar-status-badge--idle {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+}
+
+.sidebar-status-badge--idle .sidebar-status-dot {
+  background: rgba(255,255,255,0.55);
+}
+
+.sidebar-chain-empty {
+  font-size: 12px;
+  color: var(--text-on-dark-muted);
+}
+
+.sidebar-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-on-dark);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.sidebar-year {
+  font-size: 12px;
+  color: var(--text-on-dark-muted);
+  margin-bottom: 16px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin-bottom: 16px;
+}
+
+/* Info rows */
+.sidebar-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.sidebar-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sidebar-info-label {
+  color: var(--text-on-dark-muted);
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.sidebar-info-value {
+  color: var(--text-on-dark);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Section headers */
+.sidebar-section-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-on-dark-muted);
+  margin-bottom: 12px;
+  margin-top: 4px;
+}
+
+/* Approval chain */
+.sidebar-approval-chain {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 20px;
+  flex-wrap: nowrap;
+}
+
+.sidebar-chain-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.sidebar-chain-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 13px);
+  right: calc(-50% + 13px);
+  height: 1.5px;
+  background: rgba(255,255,255,0.2);
+}
+
+.sidebar-chain-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  color: var(--text-on-dark);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-chain-name {
+  font-size: 9px;
+  color: var(--text-on-dark-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Report period */
+.sidebar-filter-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.sidebar-filter-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 999px;
+  color: var(--text-on-dark-muted);
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sidebar-filter-btn:hover,
+.sidebar-filter-btn.active {
+  background: rgba(255,255,255,0.22);
+  color: var(--text-on-dark);
+}
+
+.sidebar-filter-btn.active {
+  background: rgba(255,255,255,0.25);
+  color: var(--text-on-dark);
+  font-weight: 600;
+}
+
+.sidebar-date-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sidebar-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.sidebar-date-label {
+  font-size: 9.5px;
+  color: var(--text-on-dark-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.sidebar-date-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.sidebar-date-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: var(--text-on-dark);
+  padding: 6px 32px 6px 8px;
+  font-size: 11px;
+  appearance: none;
+}
+
+.sidebar-date-input::placeholder {
+  color: var(--text-on-dark-muted);
+}
+
+.sidebar-date-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sidebar-date-icon {
+  position: absolute;
+  right: 7px;
+  color: var(--text-on-dark-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.sidebar-apply-btn {
+  width: 100%;
+  background: rgba(255,255,255,0.18);
+  color: var(--text-on-dark);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+
+.sidebar-apply-btn:hover {
+  background: rgba(255,255,255,0.28);
+}
+
+@media (max-width: 720px) {
+  .sidebar-panel {
+    width: 100%;
+    min-width: 0;
+    padding: 18px 16px;
+  }
+  .sidebar-title {
+    font-size: 22px;
+  }
+  .sidebar-info-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .sidebar-approval-chain {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .sidebar-chain-step {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    width: 100%;
+  }
+  .sidebar-chain-step:not(:last-child)::after {
+    display: none;
+  }
+  .sidebar-chain-num {
+    margin-bottom: 0;
+  }
+  .sidebar-chain-name {
+    font-size: 13px;
+    text-align: left;
+    color: #fff;
+  }
+}

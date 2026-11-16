@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import apiClient from "../services/api";
+import { displayApiText } from "../services/clearanceDisplay";
 
 // ---- Minimal QR Code generator (byte mode, error correction level M, versions 1-10) ----
 const QR_ECC_PER_BLOCK = [0, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];
@@ -337,8 +338,8 @@ function DownloadClearance({ requirements = [], clearance }) {
       new URL(apiClient.defaults.baseURL, window.location.origin),
     ).toString()
     : "";
-  const academicYear = clearance?.academic_year || "—";
-  const semester = clearance?.semester || "—";
+  const academicYear = displayApiText(clearance?.academic_year) || "—";
+  const semester = displayApiText(clearance?.semester) || "—";
 
   const downloadCertificate = async () => {
     if (!clearance?.id || isDownloading) return;
