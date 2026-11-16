@@ -8,24 +8,31 @@ export function unwrapEnvelope(response) {
   return body;
 }
 
-export function readPage(payload) {
-  if (payload && Array.isArray(payload.data)) {
-    return {
-      items: payload.data,
-      total: Number(payload.total_items ?? payload.data.length),
-      pages: Number(payload.total_pages ?? 1),
-      page: Number(payload.current_page ?? 1),
-    };
-  }
+function pageCount(total, size) {
+  const count = Number(total);
+  const pageSize = Number(size);
+  if (!Number.isFinite(count) || count <= 0) return 1;
+  if (!Number.isFinite(pageSize) || pageSize <= 0) return 1;
+  return Math.max(1, Math.ceil(count / pageSize));
+}
+
+export function readPage(payload, pageSize) {
   if (Array.isArray(payload)) {
     return { items: payload, total: payload.length, pages: 1, page: 1 };
   }
-  if (Array.isArray(payload?.results)) {
+  if (payload && (Array.isArray(payload.data) || Array.isArray(payload.results))) {
+    const items = Array.isArray(payload.data) ? payload.data : payload.results;
+    const total = Number(payload.total_items ?? payload.count ?? items.length);
+    const size = Number(payload.per_page || pageSize || items.length || 1);
+    const declaredPages = Number(payload.total_pages);
+    const pages = Number.isFinite(declaredPages) && declaredPages > 0
+      ? declaredPages
+      : pageCount(total, size);
     return {
-      items: payload.results,
-      total: Number(payload.count ?? payload.results.length),
-      pages: 1,
-      page: 1,
+      items,
+      total,
+      pages,
+      page: Number(payload.current_page ?? payload.page ?? 1),
     };
   }
   return { items: [], total: 0, pages: 1, page: 1 };
@@ -48,12 +55,12 @@ export function apiErrorMessage(error, fallback) {
 
 export async function fetchStudents(params) {
   const response = await apiClient.get("students/", { params });
-  return readPage(unwrapEnvelope(response));
+  return readPage(unwrapEnvelope(response), params?.per_page);
 }
 
 export async function fetchPrograms() {
   const response = await apiClient.get("programs/", { params: { per_page: 50, current_page: 1 } });
-  return readPage(unwrapEnvelope(response)).items.map((program) => ({
+  return readPage(unwrapEnvelope(response), 50).items.map((program) => ({
     id: program.id,
     name: program.name,
     acronym: program.acronym || program.name,
@@ -68,7 +75,7 @@ export async function fetchRoles() {
 
 export async function fetchUsers(params) {
   const response = await apiClient.get("users/", { params });
-  return readPage(unwrapEnvelope(response));
+  return readPage(unwrapEnvelope(response), params?.per_page);
 }
 
 export async function fetchUser(id) {
@@ -83,7 +90,7 @@ export async function assignRoles(userId, roles) {
 
 export async function fetchAuditLogs(params) {
   const response = await apiClient.get("audit-logs/", { params });
-  return readPage(unwrapEnvelope(response));
+  return readPage(unwrapEnvelope(response), params?.per_page);
 }
 
 export async function fetchAuditLog(id) {
@@ -110,7 +117,7 @@ export async function fetchItemTotal(params) {
   const response = await apiClient.get("student-clearance-items/", {
     params: { ...params, per_page: 1, current_page: 1 },
   });
-  return readPage(unwrapEnvelope(response)).total;
+  return readPage(unwrapEnvelope(response), 1).total;
 }
 
 export async function uploadStudentInvitations(file, { dryRun }) {
@@ -132,6 +139,41 @@ async function blobErrorMessage(blob, fallback) {
   } catch {
     return type.includes("json") ? fallback : null;
   }
+}
+
+async function fetchAllPages(path) {
+  const items = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const response = await apiClient.get(path, { params: { per_page: 100, current_page: page } });
+    const parsed = readPage(unwrapEnvelope(response), 100);
+    items.push(...parsed.items);
+    if (page >= (parsed.pages || 1)) break;
+  }
+  return items;
+}
+
+export function fetchSystemSettings() {
+  return fetchAllPages("system-settings/");
+}
+
+export async function fetchFeatureToggles() {
+  const response = await apiClient.get("system-settings/features/");
+  return readPage(unwrapEnvelope(response)).items;
+}
+
+export async function bulkUpdateSettings(settings) {
+  const response = await apiClient.patch("system-settings/bulk-update/", { settings });
+  return unwrapEnvelope(response);
+}
+
+export async function updateCurrentUser(payload) {
+  const response = await apiClient.patch("me/update/", payload);
+  return unwrapEnvelope(response);
+}
+
+export async function changeOwnPassword(payload) {
+  const response = await apiClient.post("users/change-password/", payload);
+  return unwrapEnvelope(response);
 }
 
 export async function downloadAdminFile(path, filename, params) {

@@ -386,6 +386,15 @@
   color: #fff;
 }
 
+.settings-error {
+  margin: 0 0 12px;
+  color: #8a2a2a;
+  background: #fff5f5;
+  border: 1px solid #f0c8c8;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 @media (max-width: 768px) {
   .settings-layout {
     grid-template-columns: 1fr;

@@ -8,6 +8,7 @@ import {
   fetchStudents,
   uploadStudentInvitations,
 } from "../services/portalApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./StudentDirectory.css";
 
 const PAGE_SIZE = 8;
@@ -120,6 +121,15 @@ export default function StudentDirectory() {
     const shown = new Set([1, page - 1, page, page + 1, pages].filter((value) => value >= 1 && value <= pages));
     return [...shown].sort((a, b) => a - b);
   }, [page, pages]);
+
+  if (loading && rows.length === 0 && !error) {
+    return (
+      <PortalLoading
+        title="Loading the student directory"
+        detail="Getting programs, year levels, and the current roster."
+      />
+    );
+  }
 
   async function downloadTemplate() {
     setNotice("");
@@ -280,9 +290,7 @@ export default function StudentDirectory() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan={6} className="sd2-empty">Loading students…</td></tr>
-              ) : rows.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr><td colSpan={6} className="sd2-empty">No students match your search.</td></tr>
               ) : (
                 rows.map((student, index) => {

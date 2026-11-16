@@ -1,214 +1,236 @@
-﻿import { useState } from "react";
-import { Bell, Globe, Shield, Database, Save, ChevronRight } from "lucide-react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Save } from "lucide-react";
+import apiClient from "../../services/api.js";
+import {
+  apiErrorMessage,
+  bulkUpdateSettings,
+  fetchFeatureToggles,
+  fetchSystemSettings,
+} from "../services/portalApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./Settings.css";
 
-const academicYears = [
-  { id: 1, year: "2026-2027", active: true },
-  { id: 2, year: "2025-2026", active: false },
-  { id: 3, year: "2024-2025", active: false },
-];
+function isFlag(value) {
+  return ["true", "false", "1", "0", "yes", "no"].includes(String(value).trim().toLowerCase());
+}
 
-const SECURITY_ITEMS = [
-  { key: "twoFactor",    label: "Two-Factor Authentication", desc: "Require 2FA for all admin logins",                      default: false },
-  { key: "sessionTimeout", label: "Session Timeout",         desc: "Auto logout after 30 min of inactivity",                default: true  },
-  { key: "auditTrail",   label: "Login Audit Trail",         desc: "Log all admin login attempts",                          default: true  },
-  { key: "ipRestrict",   label: "IP Restriction",            desc: "Restrict admin access to whitelisted IP addresses",     default: false },
-];
+function flagOn(value) {
+  return ["true", "1", "yes"].includes(String(value).trim().toLowerCase());
+}
+
+function titleFor(key) {
+  return String(key || "Setting")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState("notifications");
-  const [saved,     setSaved]     = useState(false);
-  const [newYear,   setNewYear]   = useState("");
+  const [settings, setSettings] = useState([]);
+  const [features, setFeatures] = useState([]);
+  const [drafts, setDrafts] = useState({});
+  const [activeTab, setActiveTab] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const [notifs, setNotifs] = useState({
-    clearanceIssued:   true,
-    studentSubmission: true,
-    deficiencyFiled:   true,
-    weeklyReport:      false,
-    systemAlerts:      true,
-  });
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetchSystemSettings(), fetchFeatureToggles()])
+      .then(([rows, featureRows]) => {
+        if (!active) return;
+        setSettings(rows);
+        setFeatures(featureRows);
+        setActiveTab(rows[0]?.bucket || (featureRows.length ? "features" : ""));
+      })
+      .catch((loadError) => {
+        if (active) setError(apiErrorMessage(loadError, "Could not load system settings."));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const [security, setSecurity] = useState({
-    twoFactor:      false,
-    sessionTimeout: true,
-    auditTrail:     true,
-    ipRestrict:     false,
-  });
+  const buckets = useMemo(() => {
+    const names = [];
+    settings.forEach((row) => {
+      const bucket = row.bucket || "general";
+      if (!names.includes(bucket)) names.push(bucket);
+    });
+    if (features.length) names.push("features");
+    return names;
+  }, [settings, features]);
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const visibleSettings = settings.filter((row) => (row.bucket || "general") === activeTab);
+
+  function valueFor(row) {
+    return drafts[row.setting_key] ?? row.setting_value ?? "";
   }
 
-  const tabs = [
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "academic",      label: "Academic Year",  icon: Globe },
-    { id: "security",      label: "Security",        icon: Shield },
-    { id: "system",        label: "System",          icon: Database },
-  ];
+  function featureValue(feature) {
+    const key = feature.key || feature.feature;
+    if (key in drafts) return flagOn(drafts[key]);
+    return Boolean(feature.enabled);
+  }
+
+  async function handleSave() {
+    setMessage("");
+    setError("");
+    if (Object.keys(drafts).length === 0) {
+      setMessage("No changes to save.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await bulkUpdateSettings(drafts);
+      setSettings((current) => current.map((row) => (
+        row.setting_key in drafts ? { ...row, setting_value: drafts[row.setting_key] } : row
+      )));
+      setFeatures((current) => current.map((feature) => {
+        const key = feature.key || feature.feature;
+        return key in drafts ? { ...feature, enabled: flagOn(drafts[key]) } : feature;
+      }));
+      setDrafts({});
+      setMessage("Settings saved.");
+    } catch (saveError) {
+      setError(apiErrorMessage(saveError, "Could not save these settings."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <PortalLoading
+        title="Loading settings"
+        detail="Getting the institute settings and the features this account can change."
+      />
+    );
+  }
 
   return (
     <div className="settings-page">
       <div className="settings-header">
         <h1 className="settings-title">Settings</h1>
-        <p className="settings-sub">Manage system preferences, notifications, and security options.</p>
+        <p className="settings-sub">Institute settings from the E-Clearance API. Only rows you are allowed to change can be edited.</p>
       </div>
 
-      <div className="settings-layout">
+      {error && <p className="settings-error" role="alert">{error}</p>}
 
-        {/* Sidebar tabs */}
-        <nav className="settings-nav">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
+      {buckets.length === 0 && !error && (
+        <p>No system settings are available for this account.</p>
+      )}
+
+      {buckets.length > 0 && (
+        <div className="settings-layout">
+          <nav className="settings-nav" aria-label="Setting sections">
+            {buckets.map((bucket) => (
               <button
-                key={tab.id}
-                className={"settings-nav-item" + (activeTab === tab.id ? " active" : "")}
-                onClick={() => setActiveTab(tab.id)}
+                key={bucket}
+                type="button"
+                className={"settings-nav-item" + (activeTab === bucket ? " active" : "")}
+                onClick={() => setActiveTab(bucket)}
               >
-                <Icon size={15} />
-                <span>{tab.label}</span>
-                <ChevronRight size={13} className="settings-nav-arrow" />
+                <span>{titleFor(bucket)}</span>
               </button>
-            );
-          })}
-        </nav>
+            ))}
+          </nav>
 
-        {/* Panel */}
-        <div className="settings-panel">
-
-          {/* ── Notifications ── */}
-          {activeTab === "notifications" && (
-            <div className="settings-section">
-              <h2 className="settings-section-title">Notification Preferences</h2>
-              <p className="settings-section-sub">Choose which events trigger admin notifications.</p>
-              <div className="settings-toggle-list">
-                {[
-                  { key: "clearanceIssued",   label: "Clearance Issued",        desc: "Notify when a clearance batch is issued to students" },
-                  { key: "studentSubmission",  label: "Student Submissions",     desc: "Notify when students submit clearance requirements" },
-                  { key: "deficiencyFiled",    label: "Deficiency Filed",        desc: "Notify when a deficiency is filed by an office" },
-                  { key: "weeklyReport",       label: "Weekly Summary Report",   desc: "Receive a weekly digest of clearance progress" },
-                  { key: "systemAlerts",       label: "System Alerts",           desc: "Critical system notifications and error alerts" },
-                ].map((item) => (
-                  <div key={item.key} className="settings-toggle-row">
-                    <div className="settings-toggle-info">
-                      <p className="settings-toggle-label">{item.label}</p>
-                      <p className="settings-toggle-desc">{item.desc}</p>
-                    </div>
-                    <button
-                      className={"settings-toggle" + (notifs[item.key] ? " on" : "")}
-                      onClick={() => setNotifs((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
-                      aria-label={item.label}
-                    >
-                      <span className="settings-toggle-thumb" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="settings-actions">
-                {saved && <span className="settings-saved-msg">Settings saved!</span>}
-                <button className="settings-save-btn" onClick={handleSave}>
-                  <Save size={14} /> Save Preferences
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Academic Year ── */}
-          {activeTab === "academic" && (
-            <div className="settings-section">
-              <h2 className="settings-section-title">Academic Year Management</h2>
-              <p className="settings-section-sub">Set the active academic year used across all clearance workflows.</p>
-              <div className="settings-academic-list">
-                {academicYears.map((ay) => (
-                  <div key={ay.id} className={"settings-academic-row" + (ay.active ? " active" : "")}>
-                    <div className="settings-academic-info">
-                      <span className="settings-academic-year">{ay.year}</span>
-                      {ay.active && <span className="settings-active-badge">Active</span>}
-                    </div>
-                    {!ay.active && <button className="settings-set-active-btn">Set as Active</button>}
-                  </div>
-                ))}
-              </div>
-              <div className="settings-add-year">
-                <h3 className="settings-add-year-title">Add New Academic Year</h3>
-                <div className="settings-add-year-form">
-                  <input
-                    type="text"
-                    className="settings-input"
-                    placeholder="e.g. 2027-2028"
-                    value={newYear}
-                    onChange={(e) => setNewYear(e.target.value)}
-                  />
-                  <button className="settings-save-btn">
-                    <Save size={14} /> Add Year
-                  </button>
+          <div className="settings-panel">
+            {activeTab === "features" ? (
+              <div className="settings-section">
+                <h2 className="settings-section-title">Optional modules</h2>
+                <p className="settings-section-sub">Modules the API reports for this institute.</p>
+                <div className="settings-toggle-list">
+                  {features.map((feature) => {
+                    const key = feature.key || feature.feature;
+                    const enabled = featureValue(feature);
+                    return (
+                      <div key={key} className="settings-toggle-row">
+                        <div className="settings-toggle-info">
+                          <p className="settings-toggle-label">{titleFor(feature.feature || key)}</p>
+                          <p className="settings-toggle-desc">
+                            {feature.available ? "Available for this institute." : "Not available for this institute."}
+                            {feature.requires ? ` Requires ${feature.requires}.` : ""}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className={"settings-toggle" + (enabled ? " on" : "")}
+                          disabled={!feature.available}
+                          aria-pressed={enabled}
+                          onClick={() => setDrafts((current) => ({ ...current, [key]: enabled ? "false" : "true" }))}
+                        >
+                          <span className="settings-toggle-thumb" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="settings-section">
+                <h2 className="settings-section-title">{titleFor(activeTab)}</h2>
+                <div className="settings-toggle-list">
+                  {visibleSettings.map((row) => {
+                    const current = valueFor(row);
+                    return (
+                      <div key={row.id || row.setting_key} className="settings-toggle-row">
+                        <div className="settings-toggle-info">
+                          <p className="settings-toggle-label">{titleFor(row.setting_key)}</p>
+                          <p className="settings-toggle-desc">{row.description || row.setting_key}</p>
+                          {isFlag(row.setting_value) ? null : (
+                            <input
+                              className="settings-input"
+                              value={current}
+                              disabled={row.can_change === false}
+                              onChange={(event) => setDrafts((draft) => ({
+                                ...draft,
+                                [row.setting_key]: event.target.value,
+                              }))}
+                            />
+                          )}
+                        </div>
+                        {isFlag(row.setting_value) && (
+                          <button
+                            type="button"
+                            className={"settings-toggle" + (flagOn(current) ? " on" : "")}
+                            disabled={row.can_change === false}
+                            aria-pressed={flagOn(current)}
+                            onClick={() => setDrafts((draft) => ({
+                              ...draft,
+                              [row.setting_key]: flagOn(current) ? "false" : "true",
+                            }))}
+                          >
+                            <span className="settings-toggle-thumb" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-          {/* ── Security ── */}
-          {activeTab === "security" && (
-            <div className="settings-section">
-              <h2 className="settings-section-title">Security Settings</h2>
-              <p className="settings-section-sub">Manage access controls and session policies.</p>
-              <div className="settings-toggle-list">
-                {SECURITY_ITEMS.map((item) => (
-                  <div key={item.key} className="settings-toggle-row">
-                    <div className="settings-toggle-info">
-                      <p className="settings-toggle-label">{item.label}</p>
-                      <p className="settings-toggle-desc">{item.desc}</p>
-                    </div>
-                    <button
-                      className={"settings-toggle" + (security[item.key] ? " on" : "")}
-                      onClick={() => setSecurity((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
-                      aria-label={item.label}
-                    >
-                      <span className="settings-toggle-thumb" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="settings-actions">
-                {saved && <span className="settings-saved-msg">Settings saved!</span>}
-                <button className="settings-save-btn" onClick={handleSave}>
-                  <Save size={14} /> Save Security Settings
-                </button>
-              </div>
+            <div className="settings-actions">
+              {message && <span className="settings-saved-msg">{message}</span>}
+              <button type="button" className="settings-save-btn" onClick={handleSave} disabled={saving}>
+                <Save size={14} /> {saving ? "Saving…" : "Save changes"}
+              </button>
             </div>
-          )}
 
-          {/* ── System ── */}
-          {activeTab === "system" && (
-            <div className="settings-section">
-              <h2 className="settings-section-title">System Information</h2>
-              <p className="settings-section-sub">Application details and configuration.</p>
-              <div className="settings-system-grid">
-                {[
-                  { label: "Application",  value: "E-Clearance Admin Portal" },
-                  { label: "Version",      value: "v2.0.0" },
-                  { label: "Institution",  value: "Davao del Norte State College" },
-                  { label: "API Endpoint", value: "http://localhost:8000/api" },
-                  { label: "Environment",  value: "Development" },
-                  { label: "Last Updated", value: "November 2026" },
-                ].map((item) => (
-                  <div key={item.label} className="settings-system-row">
-                    <span className="settings-system-label">{item.label}</span>
-                    <span className="settings-system-value">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="settings-danger-zone">
-                <h3 className="settings-danger-title">Danger Zone</h3>
-                <p className="settings-danger-desc">These actions are irreversible. Proceed with caution.</p>
-                <button className="settings-danger-btn">Clear All Clearance Data for Current Term</button>
+            <div className="settings-system-grid">
+              <div className="settings-system-row">
+                <span className="settings-system-label">API</span>
+                <span className="settings-system-value">{apiClient.defaults.baseURL}</span>
               </div>
             </div>
-          )}
-
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

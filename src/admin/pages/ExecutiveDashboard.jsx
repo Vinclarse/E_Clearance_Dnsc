@@ -171,12 +171,21 @@ export default function ExecutiveDashboard() {
   const bottlenecks = view?.bottlenecks ?? [];
   const maxBottleneck = Math.max(1, ...bottlenecks.map((row) => row.total));
 
+  if (status === "loading") {
+    return (
+      <div className="portal-loading" role="status">
+        <span className="portal-loading-spinner" aria-hidden="true" />
+        <strong>Loading the admin dashboard</strong>
+        <span>Getting clearance totals for this term.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-layout">
       <SidebarPanel term={term} loading={status === "loading"} />
 
       <div className="dashboard-main">
-        {status === "loading" && <p className="dashboard-loading">Loading campus clearance totals…</p>}
         {status === "error" && (
           <p className="dashboard-banner" role="alert">
             {error}

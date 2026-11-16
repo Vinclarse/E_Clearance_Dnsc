@@ -9,6 +9,7 @@ import {
   pickClearanceType,
 } from "../services/dashboardApi.js";
 import { apiErrorMessage, issueClearanceType, updateClearanceType } from "../services/portalApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./ClearanceTemplates.css";
 
 const YEAR_OPTIONS = [
@@ -153,6 +154,15 @@ export default function ClearanceTemplates() {
 
   const yearText = formatYearLevels(checkedLevels);
 
+  if (loading && !title && !error) {
+    return (
+      <PortalLoading
+        title="Loading clearance templates"
+        detail="Getting the issued template, its steps, and who it covers."
+      />
+    );
+  }
+
   return (
     <div className="ct-page">
       <div className="ct-config-card">
@@ -179,7 +189,6 @@ export default function ClearanceTemplates() {
           </label>
         )}
 
-        {loading && <p className="ct-builder-sub">Loading template…</p>}
         {notice && <p className="ct-banner">{notice}</p>}
         {error && <p className="ct-banner ct-banner--error" role="alert">{error}</p>}
 

@@ -1,5 +1,6 @@
 import apiClient from "../../services/api.js";
 import { displayApiText, formatAcademicYear } from "../../services/clearanceDisplay.js";
+import { readPage } from "./portalApi.js";
 
 function unwrap(response) {
   const body = response?.data;
@@ -7,27 +8,6 @@ function unwrap(response) {
     return body.data;
   }
   return body;
-}
-
-function unwrapPage(payload) {
-  if (payload && Array.isArray(payload.data)) {
-    return {
-      items: payload.data,
-      total: Number(payload.total_items ?? payload.data.length),
-      pages: Number(payload.total_pages ?? 1),
-    };
-  }
-  if (Array.isArray(payload)) {
-    return { items: payload, total: payload.length, pages: 1 };
-  }
-  if (Array.isArray(payload?.results)) {
-    return {
-      items: payload.results,
-      total: Number(payload.count ?? payload.results.length),
-      pages: 1,
-    };
-  }
-  return { items: [], total: 0, pages: 1 };
 }
 
 function ordinal(level) {
@@ -77,7 +57,7 @@ export async function fetchAdminSummary() {
 
 export async function fetchClearanceTypes() {
   const response = await apiClient.get("clearance-types/", { params: { per_page: 50, current_page: 1 } });
-  return unwrapPage(unwrap(response)).items;
+  return readPage(unwrap(response), 50).items;
 }
 
 export async function fetchClearanceTypeDashboard(id) {
@@ -107,7 +87,7 @@ async function fetchItemsByStatus(status) {
     const response = await apiClient.get("student-clearance-items/", {
       params: { status, per_page: 100, current_page: page },
     });
-    const parsed = unwrapPage(unwrap(response));
+    const parsed = readPage(unwrap(response), 100);
     total = parsed.total;
     pages = parsed.pages || 1;
     items.push(...parsed.items);
