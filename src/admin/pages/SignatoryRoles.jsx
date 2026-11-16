@@ -9,9 +9,14 @@ import {
   fetchUser,
   fetchUsers,
 } from "../services/portalApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./SignatoryRoles.css";
 
 const SIGNATORY_ORDER = ["Librarians", "Cashiers", "Advisers", "Program Chairs", "Governors", "Deans"];
+
+function sameRole(left, right) {
+  return String(left || "").trim().toLowerCase() === String(right || "").trim().toLowerCase();
+}
 const STATUS_CFG = {
   Active: { bg: "rgba(74,124,63,0.13)", color: "#2f6b25", dot: "#4a7c3f" },
   Inactive: { bg: "rgba(107,117,96,0.12)", color: "#555f4a", dot: "#8a9280" },
@@ -49,10 +54,10 @@ export default function SignatoryRoles() {
         const selectedType = pickClearanceType(types);
         const dashboard = selectedType ? await fetchClearanceTypeDashboard(selectedType.id).catch(() => null) : null;
         const requirements = dashboard?.clearance_type?.requirements ?? dashboard?.requirements ?? [];
-        const byName = new Map(catalog.map((role) => [role.name, role]));
-        const ordered = SIGNATORY_ORDER.map((name, index) => {
-          const requirement = requirements.find((item) => item.authorizing_role_name === name);
-          const role = byName.get(name);
+        const names = SIGNATORY_ORDER.map((name) => catalog.find((role) => sameRole(role.name, name))?.name || name);
+        const ordered = names.map((name, index) => {
+          const requirement = requirements.find((item) => sameRole(item.authorizing_role_name, name));
+          const role = catalog.find((item) => sameRole(item.name, name));
           return {
             name,
             step: Number(requirement?.order_sequence ?? index + 1),
@@ -151,6 +156,15 @@ export default function SignatoryRoles() {
 
   const emptyRoles = roles.filter((role) => role.staff.length === 0).length;
 
+  if (loading) {
+    return (
+      <PortalLoading
+        title="Loading signatory roles"
+        detail="Getting the approval chain and the staff assigned to each step."
+      />
+    );
+  }
+
   return (
     <div className="sr2-page">
       <div className="sr2-layout">
@@ -160,7 +174,6 @@ export default function SignatoryRoles() {
             <p className="sr2-left-sub">In approval order · select a role to see its staff</p>
           </div>
           <div className="sr2-role-list">
-            {loading && <p className="sr2-left-sub">Loading roles…</p>}
             {roles.map((role) => (
               <button
                 key={role.name}

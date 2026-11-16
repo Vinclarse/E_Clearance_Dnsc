@@ -402,6 +402,34 @@
   letter-spacing: 0.1px;
 }
 
+.dashboard-container .password-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-container .password-field input {
+  border: 1px solid #c9ccbe;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #f7f8f3;
+  font: inherit;
+  color: #2c2d25;
+}
+
+.dashboard-container .password-feedback {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.dashboard-container .password-feedback.error {
+  color: #a33b3b;
+}
+
+.dashboard-container .password-feedback.success {
+  color: #3a5a30;
+}
+
 .dashboard-container .request-right-container {
   display: flex;
   flex-direction: column;

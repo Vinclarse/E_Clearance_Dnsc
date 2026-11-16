@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
+import PortalLoading from './components/PortalLoading.jsx'
 import apiClient from './services/api.js'
-import { signOut } from './services/auth.js'
 import { accountKindFor, fetchCurrentUser, homePathForAccount } from './services/account.js'
 import {
   completePasswordReset,
@@ -33,6 +33,7 @@ import statusPending from './assets/status-pending.svg'
 import statusRejected from './assets/status-rejected.svg'
 
 const AdminPortal = lazy(() => import('./AdminPortal.jsx'))
+const SignatoryPortal = lazy(() => import('./signatory/SignatoryApp.jsx'))
 
 const processSteps = [
   {
@@ -435,24 +436,6 @@ function ForgotPasswordPage() {
   )
 }
 
-function SignatoryPendingPage() {
-  return (
-    <main className="portal-hold">
-      <section className="portal-hold-card">
-        <p className="eyebrow">Signatory portal</p>
-        <h1>This account opens the signatory portal</h1>
-        <p>
-          The institute admin dashboard is only for the Institute of Computing admin.
-          The signatory workspace for this account is not open in this version yet.
-        </p>
-        <button type="button" className="portal-hold-button" onClick={() => signOut()}>
-          Sign out
-        </button>
-      </section>
-    </main>
-  )
-}
-
 function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [loginMessage, setLoginMessage] = useState(() =>
@@ -653,10 +636,6 @@ function LoginPage() {
             <img src={shieldCheck} alt="" aria-hidden="true" />
             Your account information should remain private.
           </p>
-          <a className="login-home-link" href="/login?next=%2Fadmin">
-            <img src={arrowRight} alt="" aria-hidden="true" />
-            Administrator? Sign in for the admin portal
-          </a>
           <a className="login-home-link" href="/">
             <img src={arrowRight} alt="" aria-hidden="true" />
             Back to homepage
@@ -980,7 +959,7 @@ function App() {
   }, [accountKind, currentPath, hasAuthToken, isAdminPage, isDashboardPage, isDesignPreview, isForgotPasswordPage, isLoginPage, isSignatoryPage])
 
   if (hasAuthToken && accountKind === 'unknown' && (isAdminPage || isDashboardPage || isLoginPage || isSignatoryPage)) {
-    return <div role="status">Checking your account…</div>
+    return <PortalLoading title="Checking your account" detail="Confirming which portal this sign-in should open." />
   }
   if (accountKind === 'error' && (isAdminPage || isDashboardPage || isSignatoryPage)) {
     return (
@@ -1000,11 +979,15 @@ function App() {
     )
   }
   if (isSignatoryPage) {
-    return hasAuthToken && accountKind === 'signatory' ? <SignatoryPendingPage /> : null
+    return hasAuthToken && accountKind === 'signatory' ? (
+      <Suspense fallback={<PortalLoading title="Loading the signatory portal" detail="Opening the approval queue for this account." />}>
+        <SignatoryPortal />
+      </Suspense>
+    ) : null
   }
   if (isAdminPage) {
     return hasAuthToken && accountKind === 'admin' ? (
-      <Suspense fallback={<div role="status">Loading admin portal…</div>}>
+      <Suspense fallback={<PortalLoading title="Loading the admin portal" detail="Opening the institute dashboard." />}>
         <AdminPortal />
       </Suspense>
     ) : null

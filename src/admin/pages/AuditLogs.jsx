@@ -7,6 +7,7 @@ import {
   fetchAuditLogs,
   fetchAuditReport,
 } from "../services/portalApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./AuditLogs.css";
 
 const PAGE_SIZE = 8;
@@ -168,6 +169,15 @@ export default function AuditLogs() {
     ? [...new Set([...Object.keys(detail.old_values || {}), ...Object.keys(detail.new_values || {})])]
     : [];
 
+  if (loading && rows.length === 0 && !error) {
+    return (
+      <PortalLoading
+        title="Loading audit logs"
+        detail="Getting the latest recorded account and clearance changes."
+      />
+    );
+  }
+
   return (
     <div className="al2-page">
       <div className="al2-header">
@@ -248,9 +258,7 @@ export default function AuditLogs() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan={6} className="al2-empty">Loading audit entries…</td></tr>
-                ) : rows.length === 0 ? (
+                {rows.length === 0 ? (
                   <tr><td colSpan={6} className="al2-empty">No logs match your search.</td></tr>
                 ) : (
                   rows.map((log) => {
