@@ -11,7 +11,19 @@ const apiClient = axios.create({
 
 let refreshRequest;
 
+// Password reset is public. Sending a saved access token makes the API
+// reject the call with 401 before it reads the reset payload.
+function isPasswordResetRequest(url = "") {
+  return /(?:^|\/)password-reset\/(?:request|verify|change)\/?$/.test(url);
+}
+
 apiClient.interceptors.request.use((config) => {
+  if (isPasswordResetRequest(config.url)) {
+    config.headers?.delete?.("Authorization");
+    if (config.headers) delete config.headers.Authorization;
+    return config;
+  }
+
   const token = localStorage.getItem("auth_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -24,9 +36,9 @@ apiClient.interceptors.response.use(
   async (error) => {
     const request = error.config;
     const refreshToken = localStorage.getItem("auth_refresh_token");
-    const isAuthEndpoint = /(?:^|\/)(?:login|logout|auth\/google|token\/refresh)\/$/.test(
-      request?.url ?? "",
-    );
+    const isAuthEndpoint =
+      isPasswordResetRequest(request?.url) ||
+      /(?:^|\/)(?:login|logout|auth\/google|token\/refresh)\/?$/.test(request?.url ?? "");
 
     if (
       error.response?.status !== 401 ||

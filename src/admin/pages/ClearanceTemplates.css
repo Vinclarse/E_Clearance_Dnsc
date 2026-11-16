@@ -547,3 +547,43 @@
   text-align: center;
   margin: 0;
 }
+
+.ct-banner {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3f6ec;
+  color: #2d3a1e;
+  font-size: 13px;
+}
+
+.ct-banner--error {
+  background: #fff5f5;
+  color: #8a2a2a;
+}
+
+@media (max-width: 900px) {
+  .ct-page {
+    padding: 16px 12px 32px;
+  }
+  .ct-config-top,
+  .ct-builder-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .ct-two-col {
+    grid-template-columns: 1fr;
+  }
+  .ct-field-wide,
+  .ct-form-field {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+  .ct-step {
+    flex-wrap: wrap;
+  }
+  .ct-step-info {
+    min-width: 0;
+    flex: 1 1 160px;
+  }
+}

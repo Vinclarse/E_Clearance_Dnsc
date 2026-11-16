@@ -1,14 +1,12 @@
+import { formatClearanceTerm } from "../services/clearanceDisplay";
+
 function HeroBanner({ requirements, overallStatus, clearance }) {
   const totalCount = requirements.length;
   const clearedCount = requirements.filter(item => item.status && item.status.toLowerCase() === "cleared").length;
   const completionPercentage = totalCount
     ? Math.round((clearedCount / totalCount) * 100)
     : 0;
-  const academicTerm = [
-    clearance?.semester,
-    clearance?.academic_year ? `AY ${clearance.academic_year}` : null,
-    clearance?.clearance_type_name,
-  ].filter(Boolean).join(" · ") || "Student clearance overview";
+  const academicTerm = formatClearanceTerm(clearance) || "Student clearance overview";
 
   return (
     <div className="hero-banner">

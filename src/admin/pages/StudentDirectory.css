@@ -405,3 +405,39 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.sd2-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f6ec;
+  color: #2d3a1e;
+  font-size: 13px;
+}
+
+.sd2-banner--error {
+  background: #fff5f5;
+  color: #8a2a2a;
+}
+
+@media (max-width: 800px) {
+  .sd2-page {
+    padding: 16px 12px 32px;
+  }
+  .sd2-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .sd2-title {
+    font-size: 20px;
+  }
+  .sd2-header-actions .sd2-btn-outline,
+  .sd2-header-actions .sd2-btn-dark {
+    flex: 1 1 160px;
+    justify-content: center;
+  }
+}

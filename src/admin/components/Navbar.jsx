@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Bell, User, Settings, LogOut } from "lucide-react";
+import { Bell, User, Settings, LogOut, Menu, X } from "lucide-react";
 import { signOut } from "../../services/auth.js";
+import { fetchCurrentAdmin, fetchUnreadCount } from "../services/dashboardApi.js";
 import "./Navbar.css";
 
 const navLinks = [
@@ -14,10 +15,33 @@ const navLinks = [
 
 export default function Navbar() {
   const [showMenu,   setShowMenu]   = useState(false);
+  const [navOpen,    setNavOpen]    = useState(false);
   const [menuPos,    setMenuPos]    = useState({ top: 0, right: 0 });
-  const [notifCount]                = useState(3);
+  const [notifCount, setNotifCount] = useState(0);
+  const [profile,    setProfile]    = useState(null);
   const triggerRef                  = useRef(null);
   const dropdownRef                 = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([fetchCurrentAdmin(), fetchUnreadCount()]).then(([account, unread]) => {
+      if (!active) return;
+      if (account.status === "fulfilled") setProfile(account.value);
+      if (unread.status === "fulfilled") setNotifCount(unread.value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+  const displayName = fullName || profile?.username || "Administrator";
+  const roleName = Array.isArray(profile?.groups) && profile.groups.length
+    ? String(profile.groups[0]?.name ?? profile.groups[0])
+    : "Administrator";
+  const email = profile?.email || "";
+  const instituteName = profile?.institute?.institute_name;
+  const brandSub = instituteName ? `Administration · ${instituteName}` : "Administration";
 
   /* ── Open / close ── */
   function handleTrigger() {
@@ -72,12 +96,22 @@ export default function Navbar() {
         </div>
         <div className="nb-brand-text">
           <span className="nb-brand-name">Davao del Norte State College</span>
-          <span className="nb-brand-sub">Administration · All Institutes</span>
+          <span className="nb-brand-sub">{brandSub}</span>
         </div>
       </div>
 
+      <button
+        type="button"
+        className="nb-menu-btn"
+        aria-label={navOpen ? "Close menu" : "Open menu"}
+        aria-expanded={navOpen}
+        onClick={() => setNavOpen((open) => !open)}
+      >
+        {navOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
       {/* ── SECTION 2: Dark pill — nav links only ── */}
-      <nav className="nb-pill">
+      <nav className={"nb-pill" + (navOpen ? " nb-pill--open" : "")}>
         <ul className="nb-nav">
           {navLinks.map((link) => (
             <li key={link.to}>
@@ -85,6 +119,7 @@ export default function Navbar() {
                 to={link.to}
                 end={link.to === "/"}
                 className={({ isActive }) => "nb-link" + (isActive ? " nb-link--active" : "")}
+                onClick={() => setNavOpen(false)}
               >
                 {link.label}
               </NavLink>
@@ -114,8 +149,8 @@ export default function Navbar() {
         </div>
         {/* Name + role */}
         <div className="nb-user-text">
-          <span className="nb-user-name">Jandy Kyle Fuerzas</span>
-          <span className="nb-user-role">SYSTEM ADMINISTRATOR</span>
+          <span className="nb-user-name">{displayName}</span>
+          <span className="nb-user-role">{roleName}</span>
         </div>
         {/* Triangle caret ▼ */}
         <span className={"nb-caret" + (showMenu ? " nb-caret--up" : "")}>▾</span>
@@ -133,9 +168,9 @@ export default function Navbar() {
               <img src="/dnsc-logo.jpg" alt="DNSC" />
             </div>
             <div className="nb-dd-info">
-              <p className="nb-dd-name">Jandy Kyle Fuerzas</p>
-              <p className="nb-dd-email">admin@dnsc.edu.ph</p>
-              <span className="nb-dd-role-badge">System Administrator</span>
+              <p className="nb-dd-name">{displayName}</p>
+              <p className="nb-dd-email">{email || "Signed-in administrator"}</p>
+              <span className="nb-dd-role-badge">{roleName}</span>
             </div>
           </div>
 

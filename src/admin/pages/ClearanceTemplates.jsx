@@ -1,88 +1,213 @@
-import { useState } from "react";
-import { Lock, ArrowUpDown, GripVertical, CheckCircle2, Send } from "lucide-react";
-import { templateSteps } from "../data/mockData.js";
+import { useEffect, useState } from "react";
+import { CheckCircle2, Send } from "lucide-react";
+import { displayApiText, formatAcademicYear } from "../../services/clearanceDisplay.js";
+import {
+  fetchAdminSummary,
+  fetchClearanceTypeDashboard,
+  fetchClearanceTypes,
+  formatYearLevels,
+  pickClearanceType,
+} from "../services/dashboardApi.js";
+import { apiErrorMessage, issueClearanceType, updateClearanceType } from "../services/portalApi.js";
 import "./ClearanceTemplates.css";
 
-const YEAR_BREAKDOWN = [
-  { label: "1st Year", count: 340, color: "#7aab5a" },
-  { label: "2nd Year", count: 310, color: "#7aab5a" },
-  { label: "3rd Year", count: 320, color: "#7aab5a" },
-  { label: "4th Year", count: 270, color: "#7aab5a" },
+const YEAR_OPTIONS = [
+  { level: 1, label: "1st Year" },
+  { level: 2, label: "2nd Year" },
+  { level: 3, label: "3rd Year" },
+  { level: 4, label: "4th Year" },
 ];
 
+function levelsFromType(type) {
+  const selected = new Set((type?.target_year_levels ?? []).map(Number));
+  return Object.fromEntries(YEAR_OPTIONS.map((option) => [option.level, selected.has(option.level)]));
+}
+
 export default function ClearanceTemplates() {
-  const [title, setTitle]           = useState("Semestral Clearance");
-  const [academicYear, setAcademicYear] = useState("2026-2027");
-  const [semester, setSemester]     = useState("2nd Semester");
-  const [yearLevels, setYearLevels] = useState({
-    "1st Year": true, "2nd Year": true, "3rd Year": true, "4th Year": true,
-  });
+  const [types, setTypes] = useState([]);
+  const [typeId, setTypeId] = useState(null);
+  const [title, setTitle] = useState("");
+  const [academicYear, setAcademicYear] = useState("");
+  const [semester, setSemester] = useState("");
+  const [yearLevels, setYearLevels] = useState({ 1: false, 2: false, 3: false, 4: false });
+  const [issued, setIssued] = useState(false);
+  const [active, setActive] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [eligible, setEligible] = useState(0);
+  const [yearBars, setYearBars] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
 
-  const toggleYear = (level) =>
-    setYearLevels((prev) => ({ ...prev, [level]: !prev[level] }));
+  function applyType(type, dashboard, summary) {
+    const clearance = dashboard?.clearance_type ?? type ?? {};
+    const requirements = Array.isArray(clearance.requirements) ? clearance.requirements : [];
+    setTypeId(clearance.id ?? type?.id ?? null);
+    setTitle(displayApiText(clearance.name));
+    setAcademicYear(displayApiText(clearance.academic_year).replace(/^ay\s+/i, ""));
+    setSemester(displayApiText(clearance.semester));
+    setYearLevels(levelsFromType(clearance));
+    setIssued(Boolean(clearance.is_issued));
+    setActive(Boolean(clearance.is_active));
+    setSteps([...requirements].sort((a, b) => Number(a.order_sequence ?? 0) - Number(b.order_sequence ?? 0)));
+    const stats = dashboard?.stats ?? {};
+    setEligible(Number(
+      clearance.is_issued
+        ? (stats.issued_students_count ?? 0)
+        : (stats.target_students_count ?? summary?.total_students ?? 0),
+    ));
+    const total = Number(summary?.total_students ?? 0);
+    const counts = new Map((summary?.students_by_year_level ?? []).map((row) => [Number(row.year_level), Number(row.count ?? 0)]));
+    setYearBars(YEAR_OPTIONS.map((option) => ({
+      label: option.label,
+      count: counts.get(option.level) || 0,
+      width: total ? ((counts.get(option.level) || 0) / total) * 100 : 0,
+    })));
+  }
 
-  const checkedYears = Object.keys(yearLevels).filter((k) => yearLevels[k]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [loadedTypes, summary] = await Promise.all([fetchClearanceTypes(), fetchAdminSummary()]);
+        const selected = pickClearanceType(loadedTypes);
+        const dashboard = selected?.id != null ? await fetchClearanceTypeDashboard(selected.id) : null;
+        if (cancelled) return;
+        setTypes(loadedTypes);
+        applyType(selected, dashboard, summary);
+        setError("");
+      } catch (loadError) {
+        if (!cancelled) setError(apiErrorMessage(loadError, "Clearance templates could not be loaded."));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function selectType(nextId) {
+    const selected = types.find((type) => String(type.id) === String(nextId));
+    if (!selected) return;
+    setLoading(true);
+    setError("");
+    try {
+      const [dashboard, summary] = await Promise.all([
+        fetchClearanceTypeDashboard(selected.id),
+        fetchAdminSummary(),
+      ]);
+      applyType(selected, dashboard, summary);
+    } catch (loadError) {
+      setError(apiErrorMessage(loadError, "That template could not be loaded."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const checkedLevels = YEAR_OPTIONS.filter((option) => yearLevels[option.level]).map((option) => option.level);
+
+  async function saveTemplate() {
+    if (!typeId) return;
+    if (!title.trim() || !academicYear.trim() || !semester.trim()) {
+      setError("Title, academic year, and semester are required.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await updateClearanceType(typeId, {
+        name: title.trim(),
+        academic_year: academicYear.trim(),
+        semester: semester.trim(),
+        target_year_levels: checkedLevels,
+        is_active: active,
+      });
+      setNotice("Template saved.");
+    } catch (saveError) {
+      setError(apiErrorMessage(saveError, "The template could not be saved."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function issueTemplate() {
+    if (!typeId || issued) return;
+    if (!window.confirm("Issue this clearance to every eligible student?")) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await issueClearanceType(typeId);
+      setIssued(true);
+      setNotice("Clearance records are being created for eligible students.");
+    } catch (issueError) {
+      setError(apiErrorMessage(issueError, "The clearance could not be issued."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const yearText = formatYearLevels(checkedLevels);
 
   return (
     <div className="ct-page">
-
-      {/* ── Template Configuration Card ── */}
       <div className="ct-config-card">
         <div className="ct-config-top">
           <div className="ct-config-title-row">
             <h2 className="ct-config-title">Template Configuration</h2>
-            <span className="ct-draft-badge">DRAFT</span>
+            <span className="ct-draft-badge">{issued ? "ISSUED" : active ? "ACTIVE" : "DRAFT"}</span>
           </div>
-          <button className="ct-btn-save-draft">Save Draft</button>
+          <button type="button" className="ct-btn-save-draft" onClick={saveTemplate} disabled={saving || !typeId}>
+            {saving ? "Saving…" : "Save template"}
+          </button>
         </div>
 
+        {types.length > 1 && (
+          <label className="ct-label">
+            Template
+            <select className="ct-select" value={typeId ?? ""} onChange={(event) => selectType(event.target.value)}>
+              {types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {displayApiText(type.name) || `Template ${type.id}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {loading && <p className="ct-builder-sub">Loading template…</p>}
+        {notice && <p className="ct-banner">{notice}</p>}
+        {error && <p className="ct-banner ct-banner--error" role="alert">{error}</p>}
+
         <div className="ct-form-row">
-          {/* Clearance Title */}
           <div className="ct-form-field ct-field-wide">
             <label className="ct-label">Clearance Title</label>
-            <input
-              type="text"
-              className="ct-text-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <input className="ct-text-input" value={title} placeholder="Clearance title" onChange={(event) => setTitle(event.target.value)} />
           </div>
-
-          {/* Academic Year */}
           <div className="ct-form-field">
             <label className="ct-label">Academic Year</label>
-            <select className="ct-select" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}>
-              <option value="2026-2027">2026-2027</option>
-              <option value="2025-2026">2025-2026</option>
-            </select>
+            <input className="ct-text-input" value={academicYear} placeholder="2026-2027" onChange={(event) => setAcademicYear(event.target.value)} />
           </div>
-
-          {/* Semester */}
           <div className="ct-form-field">
             <label className="ct-label">Semester</label>
-            <select className="ct-select" value={semester} onChange={(e) => setSemester(e.target.value)}>
-              <option value="1st Semester">1st Semester</option>
-              <option value="2nd Semester">2nd Semester</option>
-              <option value="Summer">Summer</option>
-            </select>
+            <input className="ct-text-input" value={semester} placeholder="1st Semester" onChange={(event) => setSemester(event.target.value)} />
           </div>
-
-          {/* Year Level checkboxes */}
           <div className="ct-year-levels-field">
             <label className="ct-label">Target Student Year Levels</label>
             <div className="ct-year-checkboxes">
-              {Object.keys(yearLevels).map((level) => (
-                <label
-                  key={level}
-                  className={"ct-year-chip" + (yearLevels[level] ? " checked" : "")}
-                >
+              {YEAR_OPTIONS.map((option) => (
+                <label key={option.level} className={"ct-year-chip" + (yearLevels[option.level] ? " checked" : "")}>
                   <input
                     type="checkbox"
                     className="ct-checkbox"
-                    checked={yearLevels[level]}
-                    onChange={() => toggleYear(level)}
+                    checked={Boolean(yearLevels[option.level])}
+                    onChange={() => setYearLevels((current) => ({ ...current, [option.level]: !current[option.level] }))}
                   />
-                  {level}
+                  {option.label}
                 </label>
               ))}
             </div>
@@ -90,110 +215,85 @@ export default function ClearanceTemplates() {
         </div>
       </div>
 
-      {/* ── Two-column layout ── */}
       <div className="ct-two-col">
-
-        {/* Left – Sequential Requirement Builder */}
         <div className="ct-builder-card">
           <div className="ct-builder-header">
             <div>
               <h3 className="ct-builder-title">Sequential Requirement Builder</h3>
               <p className="ct-builder-sub">Each step unlocks only after the one before it is cleared.</p>
             </div>
-            <button className="ct-reorder-btn">
-              <ArrowUpDown size={12} />
-              Reorder steps
-            </button>
           </div>
-
           <div className="ct-steps">
-            {templateSteps.map((step) => (
-              <div key={step.id} className="ct-step">
-                <span className="ct-drag-handle"><GripVertical size={15} /></span>
-                <div className="ct-step-num">{step.id}</div>
-                <div className="ct-step-info">
-                  <p className="ct-step-title">{step.title}</p>
-                  <p className="ct-step-desc">{step.description}</p>
+            {steps.length === 0 ? (
+              <p className="ct-builder-sub">This template has no requirements yet.</p>
+            ) : (
+              steps.map((step, index) => (
+                <div key={step.id ?? index} className="ct-step">
+                  <div className="ct-step-num">{step.order_sequence ?? index + 1}</div>
+                  <div className="ct-step-info">
+                    <p className="ct-step-title">{displayApiText(step.name) || "Requirement"}</p>
+                    <p className="ct-step-desc">Step {step.order_sequence ?? index + 1}</p>
+                  </div>
+                  <div className="ct-step-role-block">
+                    <span className="ct-step-role-label">Authorizing Role</span>
+                    <span className="ct-step-role-pill">{step.authorizing_role_name || "Office"}</span>
+                  </div>
                 </div>
-                <div className="ct-step-role-block">
-                  <span className="ct-step-role-label">Authorizing Role</span>
-                  <span className="ct-step-role-pill">{step.role}</span>
-                </div>
-                <div className="ct-step-note">
-                  {step.locked && <Lock size={11} className="ct-lock-icon" />}
-                  <span className="ct-step-note-text">{step.note}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-
           <div className="ct-builder-footer">
             <span className="ct-step-count">
               <CheckCircle2 size={14} className="ct-check-icon" />
-              6 of 6 steps configured
+              {steps.length} step{steps.length === 1 ? "" : "s"} configured
             </span>
-            <button className="ct-btn-save-seq">Save Sequence</button>
           </div>
         </div>
 
-        {/* Right – Preview / Ready to Issue card */}
         <div className="ct-preview-card">
-          <p className="ct-preview-ready">READY TO ISSUE</p>
-          <h3 className="ct-preview-title">{title}</h3>
-          <p className="ct-preview-sub">AY {academicYear} · {semester}</p>
-
+          <p className="ct-preview-ready">{issued ? "ISSUED" : "READY TO ISSUE"}</p>
+          <h3 className="ct-preview-title">{title || "Untitled clearance"}</h3>
+          <p className="ct-preview-sub">{formatAcademicYear(academicYear) || "Year not set"} · {semester || "Semester not set"}</p>
           <div className="ct-preview-divider" />
-
           <div className="ct-preview-info-list">
             <div className="ct-preview-info-row">
               <span className="ct-preview-info-label">Approval chain</span>
-              <span className="ct-preview-info-value">6 sequential steps</span>
+              <span className="ct-preview-info-value">{steps.length} sequential steps</span>
             </div>
             <div className="ct-preview-info-row">
               <span className="ct-preview-info-label">Target year levels</span>
-              <span className="ct-preview-info-value">
-                {checkedYears.length === 4 ? "1st to 4th Year" : checkedYears.join(", ") || "None"}
-              </span>
+              <span className="ct-preview-info-value">{yearText === "—" ? "None" : yearText}</span>
             </div>
             <div className="ct-preview-info-row">
               <span className="ct-preview-info-label">Template status</span>
-              <span className="ct-preview-info-value">Draft</span>
+              <span className="ct-preview-info-value">{issued ? "Issued" : active ? "Active" : "Draft"}</span>
             </div>
           </div>
-
           <div className="ct-preview-eligible-row">
-            <span className="ct-preview-eligible-num">1,240</span>
-            <span className="ct-preview-eligible-label">eligible students</span>
+            <span className="ct-preview-eligible-num">{eligible.toLocaleString()}</span>
+            <span className="ct-preview-eligible-label">{issued ? "students issued" : "eligible students"}</span>
           </div>
-
-          {/* Year bars – 2×2 grid */}
           <div className="ct-preview-bars-grid">
-            {YEAR_BREAKDOWN.map((yr) => (
-              <div key={yr.label} className="ct-preview-bar-item">
+            {yearBars.map((year) => (
+              <div key={year.label} className="ct-preview-bar-item">
                 <div className="ct-preview-bar-top">
-                  <span className="ct-preview-bar-label">{yr.label}</span>
-                  <span className="ct-preview-bar-count">{yr.count}</span>
+                  <span className="ct-preview-bar-label">{year.label}</span>
+                  <span className="ct-preview-bar-count">{year.count}</span>
                 </div>
                 <div className="ct-preview-bar-track">
-                  <div
-                    className="ct-preview-bar-fill"
-                    style={{ width: `${(yr.count / 340) * 100}%` }}
-                  />
+                  <div className="ct-preview-bar-fill" style={{ width: `${year.width}%` }} />
                 </div>
               </div>
             ))}
           </div>
-
-          <button className="ct-preview-issue-btn">
+          <button type="button" className="ct-preview-issue-btn" onClick={issueTemplate} disabled={saving || issued || !typeId}>
             <Send size={14} />
-            Issue Clearance to Students
+            {issued ? "Already issued" : "Issue Clearance to Students"}
           </button>
-
           <p className="ct-preview-note">
             One clearance record is created for every eligible student, and each student is notified automatically.
           </p>
         </div>
-
       </div>
     </div>
   );
