@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import apiClient from "../services/api";
+import PortalLoading from "./PortalLoading.jsx";
 
 function RequirementsSection() {
   const [requirements, setRequirements] = useState([]);
@@ -8,12 +9,10 @@ function RequirementsSection() {
   useEffect(() => {
     apiClient.get("student-clearances/my-clearances/")
     .then((res) => {
-      const dataArray = res.data;
-      if (Array.isArray(dataArray) && dataArray.length > 0) {
-        setRequirements(dataArray[0].items || []);
-      } else if (dataArray && dataArray.items) {
-        setRequirements(dataArray.items);
-      }
+      const payload = res.data && typeof res.data === "object" && "data" in res.data ? res.data.data : res.data;
+      const records = Array.isArray(payload) ? payload : payload?.data || (payload ? [payload] : []);
+      const first = records[0];
+      setRequirements(Array.isArray(first?.items) ? first.items : []);
       setLoading(false);
     })
     .catch((err) => {
@@ -23,19 +22,14 @@ function RequirementsSection() {
   }, []);
 
   if (loading) {
-    return <div className="alert-card">Loading requirements checklist...</div>;
+    return <PortalLoading title="Loading your requirements" detail="Getting the steps on your clearance." />;
   }
 
-  const fallbackRequirements = [
-    { id: 1, requirement_name: "Library Clearance", status: "cleared" },
-    { id: 2, requirement_name: "Cashier Clearance", status: "deficiency" },
-    { id: 3, requirement_name: "Adviser Approval", status: "pending" },
-    { id: 4, requirement_name: "Program Chair Approval", status: "pending" },
-    { id: 5, requirement_name: "Institute Governor Clearance", status: "pending" },
-    { id: 6, requirement_name: "Institute Dean Clearance", status: "pending" }
-  ];
+  if (requirements.length === 0) {
+    return <div className="alert-card">No clearance requirements are on this account yet.</div>;
+  }
 
-  const activeList = requirements.length > 0 ? requirements : fallbackRequirements;
+  const activeList = requirements;
 
   return (
     <div className="requirements-list-container">

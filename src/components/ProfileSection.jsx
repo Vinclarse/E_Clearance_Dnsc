@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import apiClient from "../services/api";
+import PasswordInput from "./PasswordInput.jsx";
+import PortalLoading from "./PortalLoading.jsx";
 
 function getProfileUpdateErrorMessage(error) {
   const responseData = error.response?.data;
@@ -29,6 +31,12 @@ function ProfileSection({ onAvatarUpdated, requirements = [] }) {
   const [showToast, setShowToast] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     apiClient.get("me/")
@@ -98,8 +106,42 @@ function ProfileSection({ onAvatarUpdated, requirements = [] }) {
     setShowModal(false);
   };
 
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordMessage("");
+    if (newPassword !== confirmPassword) {
+      setPasswordError("The passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("Use at least 8 characters.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await apiClient.post("users/change-password/", {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMessage("Your password has been updated.");
+    } catch (error) {
+      const detail = error.response?.data?.errors?.detail
+        || error.response?.data?.message
+        || error.message
+        || "Could not update the password.";
+      setPasswordError(detail === "Error" ? "Could not update the password." : detail);
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   if (loading) {
-    return <div className="tracker-blueprint-alert">Retrieving institutional profile rows...</div>;
+    return <PortalLoading title="Loading your profile" detail="Getting your account and clearance details." />;
   }
 
   const initials = profile?.first_name && profile?.last_name
@@ -206,6 +248,27 @@ function ProfileSection({ onAvatarUpdated, requirements = [] }) {
             <span className="info-value">{requirements.length} Requirements</span>
           </div>
         </div>
+
+        <form className="profile-inner-capsule" onSubmit={handlePasswordChange}>
+          <h3 className="capsule-title">Change Password</h3>
+          <label className="password-field">
+            <span className="info-label">Current password</span>
+            <PasswordInput autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
+          </label>
+          <label className="password-field">
+            <span className="info-label">New password</span>
+            <PasswordInput autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
+          </label>
+          <label className="password-field">
+            <span className="info-label">Confirm new password</span>
+            <PasswordInput autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
+          </label>
+          {passwordError && <p className="password-feedback error" role="alert">{passwordError}</p>}
+          {passwordMessage && <p className="password-feedback success" role="status">{passwordMessage}</p>}
+          <button type="submit" className="submit-request-form-btn-aligned" disabled={savingPassword}>
+            {savingPassword ? "Updating..." : "Update Password"}
+          </button>
+        </form>
       </div>
 
       {showModal && (

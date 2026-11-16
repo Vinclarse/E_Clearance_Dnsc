@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
+import PortalLoading from './components/PortalLoading.jsx'
 import apiClient from './services/api.js'
+import { accountKindFor, fetchCurrentUser, homePathForAccount } from './services/account.js'
+import {
+  completePasswordReset,
+  requestPasswordReset,
+  verifyPasswordReset,
+} from './services/passwordReset.js'
 import arrowRight from './assets/arrow-right.svg'
 import dashboardIllustration from './assets/clearance-dashboard-illustration.svg'
 import eyeIcon from './assets/eye.png'
+import mailIcon from './assets/mail.png'
 import featureMobile from './assets/feature-mobile-friendly.svg'
 import featureOffice from './assets/feature-office-approval.svg'
 import featureProgress from './assets/feature-progress-tracking.svg'
@@ -23,6 +31,9 @@ import statusCompleted from './assets/status-completed.svg'
 import statusProgress from './assets/status-in-progress.svg'
 import statusPending from './assets/status-pending.svg'
 import statusRejected from './assets/status-rejected.svg'
+
+const AdminPortal = lazy(() => import('./AdminPortal.jsx'))
+const SignatoryPortal = lazy(() => import('./signatory/SignatoryApp.jsx'))
 
 const processSteps = [
   {
@@ -134,9 +145,11 @@ function getLoginErrorMessage(error) {
   const responseData = error.response?.data
   const errorData = responseData?.data ?? responseData
   const errors = errorData?.errors ?? responseData?.errors
-  const fieldError = Object.values(errors ?? {})
-    .flat()
-    .find((value) => typeof value === 'string')
+  const fieldError = Object.entries(errors ?? {})
+    .filter(([key]) => key !== 'code' && key !== 'messages')
+    .flatMap(([, value]) => (Array.isArray(value) ? value : [value]))
+    .filter((value) => typeof value === 'string')
+    .join(' ') || undefined
   const message =
     errorData?.detail ??
     errors?.detail ??
@@ -152,100 +165,286 @@ function getLoginErrorMessage(error) {
   return error.message || 'Sign-in failed. Please try again.'
 }
 
-function PasswordResetForm({ onCancel, onComplete }) {
+async function openAccountHome() {
+  try {
+    const profile = await fetchCurrentUser()
+    window.location.assign(homePathForAccount(profile))
+  } catch (error) {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_refresh_token')
+    throw error
+  }
+}
+
+function ForgotPasswordPage() {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
   const [changeToken, setChangeToken] = useState('')
   const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const showFeedback = (text, tone) => {
+    setMessage(text)
+    setMessageTone(tone)
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setMessage('')
-    setIsSubmitting(true)
+    showFeedback('', '')
     const formData = new FormData(event.currentTarget)
+
+    if (step === 3) {
+      const newPassword = String(formData.get('new-password') ?? '')
+      if (newPassword !== String(formData.get('confirm-password') ?? '')) {
+        showFeedback('The passwords do not match.', 'error')
+        return
+      }
+    }
+
+    setIsSubmitting(true)
 
     try {
       if (step === 1) {
         const address = String(formData.get('email') ?? '').trim()
-        await apiClient.post('password-reset/request/', { email: address })
+        const result = await requestPasswordReset(address)
         setEmail(address)
+        setChangeToken('')
         setStep(2)
-        setMessage('If this email is registered, a verification code has been sent.')
+        showFeedback(result.detail, 'success')
       } else if (step === 2) {
         const code = String(formData.get('code') ?? '').trim()
-        const response = await apiClient.post('password-reset/verify/', { email, code })
-        const result = response.data?.data ?? response.data
-        if (typeof result?.change_token !== 'string' || !result.change_token) {
-          throw new Error('The API did not return a password reset token. Request a new code.')
-        }
-        setChangeToken(result.change_token)
+        const result = await verifyPasswordReset(email, code)
+        setChangeToken(result.changeToken)
         setStep(3)
+        showFeedback('', '')
       } else {
-        const newPassword = String(formData.get('new-password') ?? '')
-        if (newPassword !== String(formData.get('confirm-password') ?? '')) {
-          setMessage('The passwords do not match.')
-          return
-        }
-        await apiClient.post('password-reset/change/', {
-          change_token: changeToken,
-          new_password: newPassword,
-        })
-        onComplete()
+        await completePasswordReset(changeToken, String(formData.get('new-password') ?? ''))
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_refresh_token')
+        window.location.assign('/login?password_reset=success')
       }
     } catch (error) {
-      setMessage(getLoginErrorMessage(error))
+      showFeedback(getLoginErrorMessage(error), 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleResend = async () => {
+    showFeedback('', '')
+    setIsSubmitting(true)
+    try {
+      const result = await requestPasswordReset(email)
+      showFeedback(result.detail, 'success')
+    } catch (error) {
+      showFeedback(getLoginErrorMessage(error), 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const resetSteps = [
+    { title: 'Enter your email', description: 'We send a code to your registered address' },
+    { title: 'Verify the code', description: 'Type the 6-digit code from your inbox' },
+    { title: 'Create a new password', description: 'Choose something secure and easy to remember' },
+  ]
+
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
-      {step === 1 ? (
-        <>
-          <label htmlFor="reset-email">Account email</label>
-          <input
-            id="reset-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </>
-      ) : step === 2 ? (
-        <>
-          <p className="login-form-description">Enter the verification code sent to {email}.</p>
-          <label htmlFor="reset-code">Verification code</label>
-          <input id="reset-code" name="code" autoComplete="one-time-code" minLength={4} maxLength={8} required />
-        </>
-      ) : (
-        <>
-          <label htmlFor="new-password">New password</label>
-          <input id="new-password" name="new-password" type="password" autoComplete="new-password" required />
-          <label htmlFor="confirm-password">Confirm new password</label>
-          <input id="confirm-password" name="confirm-password" type="password" autoComplete="new-password" required />
-        </>
-      )}
-      <button className="login-submit-button" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Please wait…' : step === 1 ? 'Send code' : step === 2 ? 'Verify code' : 'Update password'}
-      </button>
-      <button className="login-text-button" type="button" onClick={onCancel}>
-        Back to sign in
-      </button>
-      {message && <p className="login-message" role="status">{message}</p>}
-    </form>
+    <main className="reset-page">
+      <section className="reset-intro" aria-labelledby="reset-intro-title">
+        <a className="reset-brand" href="/" aria-label="E-Clearance System home">
+          <span className="reset-brand-mark" aria-hidden="true" />
+          <span className="reset-brand-text">
+            <strong>E-Clearance System</strong>
+            <small>Davao del Norte State College</small>
+          </span>
+        </a>
+
+        <div className="reset-intro-copy">
+          <h1 id="reset-intro-title">Forgot your password?</h1>
+          <p className="reset-intro-description">
+            No worries. Verify your email and set a new password in three quick steps.
+          </p>
+
+          <ol className="reset-steps" aria-label="Password reset steps">
+            {resetSteps.map((item, index) => (
+              <li key={item.title} className={step === index + 1 ? 'active' : ''}>
+                <span className="reset-step-count">{index + 1}</span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <footer className="reset-footer">
+          <span>Institute of Computing · E-Clearance System</span>
+        </footer>
+      </section>
+
+      <section className="reset-panel" aria-label="Reset password form">
+        <div className="reset-card">
+          <div className="reset-progress" aria-hidden="true">
+            {[1, 2, 3].map((item) => (
+              <span key={item} data-filled={item <= step ? 'true' : 'false'} />
+            ))}
+          </div>
+
+          <form className="reset-form" onSubmit={handleSubmit} key={step}>
+            <p className="reset-step-kicker">Step {step} of 3</p>
+
+            {step === 1 ? (
+              <>
+                <h2>Enter your email</h2>
+                <p className="reset-step-copy">
+                  Type the email address registered to your account. We will send a 6-digit verification code to it.
+                </p>
+                <label htmlFor="reset-email">Registered Email Address</label>
+                <div className="reset-input-wrap">
+                  <img src={mailIcon} alt="" aria-hidden="true" />
+                  <input
+                    id="reset-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="name@school.edu"
+                    required
+                  />
+                </div>
+              </>
+            ) : step === 2 ? (
+              <>
+                <h2>Verify the code</h2>
+                <p className="reset-step-copy">
+                  Enter the 6-digit verification code sent to <strong>{email}</strong>.
+                </p>
+                <label htmlFor="reset-code">Verification Code</label>
+                <input
+                  id="reset-code"
+                  name="code"
+                  autoComplete="one-time-code"
+                  inputMode="text"
+                  minLength={4}
+                  maxLength={8}
+                  placeholder="Enter the code"
+                  required
+                />
+                <div className="reset-secondary-actions">
+                  <button className="reset-inline-button" type="button" onClick={handleResend} disabled={isSubmitting}>
+                    Resend code
+                  </button>
+                  <button
+                    className="reset-inline-button"
+                    type="button"
+                    onClick={() => {
+                      setChangeToken('')
+                      showFeedback('', '')
+                      setStep(1)
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Use a different email
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Create a new password</h2>
+                <p className="reset-step-copy">Choose something secure and easy to remember.</p>
+                <label htmlFor="new-password">New Password</label>
+                <div className="reset-input-wrap has-toggle">
+                  <input
+                    id="new-password"
+                    name="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    className="password-visibility-toggle"
+                    type="button"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showNewPassword}
+                    onClick={() => setShowNewPassword((visible) => !visible)}
+                  >
+                    <img src={eyeIcon} alt="" />
+                    {!showNewPassword && <span className="password-eye-slash" aria-hidden="true" />}
+                  </button>
+                </div>
+                <label htmlFor="confirm-password">Confirm Password</label>
+                <div className="reset-input-wrap has-toggle">
+                  <input
+                    id="confirm-password"
+                    name="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    className="password-visibility-toggle"
+                    type="button"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showConfirmPassword}
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                  >
+                    <img src={eyeIcon} alt="" />
+                    {!showConfirmPassword && <span className="password-eye-slash" aria-hidden="true" />}
+                  </button>
+                </div>
+                <p className="reset-password-hint">At least 8 characters. Avoid common or all-numeric passwords.</p>
+              </>
+            )}
+
+            {message && (
+              <p className={`reset-feedback ${messageTone}`} role={messageTone === 'error' ? 'alert' : 'status'}>
+                {message}
+              </p>
+            )}
+
+            <button className="reset-submit-button" type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? 'Please wait…'
+                : step === 1
+                  ? 'Send Verification Code'
+                  : step === 2
+                    ? 'Verify Code'
+                    : 'Update Password'}
+            </button>
+          </form>
+
+          <div className="reset-actions">
+            <a className="reset-back-link" href="/login">
+              ← Back to Login
+            </a>
+            <p className="reset-help">
+              Need help?{' '}
+              <a href="mailto:registrar@dnsc.edu.ph">Contact the Registrar</a>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
   )
 }
 
 function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [loginMessage, setLoginMessage] = useState('')
+  const [loginMessage, setLoginMessage] = useState(() =>
+    new URLSearchParams(window.location.search).get('password_reset') === 'success'
+      ? 'Your password has been updated. Sign in with your new password.'
+      : '',
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
-  const [showPasswordReset, setShowPasswordReset] = useState(false)
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ''
 
   const handleLogin = async (event) => {
@@ -260,7 +459,7 @@ function LoginPage() {
     try {
       const response = await apiClient.post('login/', { username, password })
       storeAuthTokens(response.data)
-      window.location.assign('/dashboard')
+      await openAccountHome()
     } catch (error) {
       setLoginMessage(getLoginErrorMessage(error))
     } finally {
@@ -282,7 +481,7 @@ function LoginPage() {
         token: credentialResponse.credential,
       })
       storeAuthTokens(response.data)
-      window.location.assign('/dashboard')
+      await openAccountHome()
     } catch (error) {
       setLoginMessage(getLoginErrorMessage(error))
     } finally {
@@ -338,24 +537,10 @@ function LoginPage() {
       <section className="login-form-panel" aria-labelledby="login-title">
         <div className="login-form-content">
           <p className="eyebrow">Welcome back</p>
-          <h2 id="login-title">{showPasswordReset ? 'Reset your password' : 'Sign in to your account'}</h2>
+          <h2 id="login-title">Sign in to your account</h2>
           <p className="login-form-description">
-            {showPasswordReset
-              ? 'Request a verification code, then choose a new password.'
-              : 'Enter your account details to access your student clearance.'}
+            Enter your account details to access your student clearance.
           </p>
-          {showPasswordReset ? (
-            <PasswordResetForm
-              onCancel={() => {
-                setShowPasswordReset(false)
-                setLoginMessage('')
-              }}
-              onComplete={() => {
-                setShowPasswordReset(false)
-                setLoginMessage('Your password has been updated. Sign in with your new password.')
-              }}
-            />
-          ) : (
           <form
             className="login-form"
             onSubmit={handleLogin}
@@ -371,16 +556,12 @@ function LoginPage() {
             />
             <div className="login-password-label">
               <label htmlFor="login-password">Password</label>
-              <button
+              <a
                 className="login-text-button"
-                type="button"
-                onClick={() => {
-                  setShowPasswordReset(true)
-                  setLoginMessage('')
-                }}
+                href="/forgot-password"
               >
                 Forgot password?
-              </button>
+              </a>
             </div>
             <div className="login-password-field">
               <input
@@ -451,7 +632,6 @@ function LoginPage() {
             )}
             {loginMessage && <p className="login-message" role="status">{loginMessage}</p>}
           </form>
-          )}
           <p className="login-privacy-note">
             <img src={shieldCheck} alt="" aria-hidden="true" />
             Your account information should remain private.
@@ -705,33 +885,118 @@ function SectionHeading({ eyebrow, title, description, titleId }) {
 }
 
 function App() {
-  const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
+  const [currentPath, setCurrentPath] = useState(
+    () => window.location.pathname.replace(/\/+$/, '') || '/',
+  )
   const isLoginPage = currentPath === '/login'
+  const isForgotPasswordPage = currentPath === '/forgot-password'
   const isDashboardPage = currentPath === '/dashboard'
+  const isAdminPage = currentPath === '/admin' || currentPath.startsWith('/admin/')
+  const isSignatoryPage = currentPath === '/signatory' || currentPath.startsWith('/signatory/')
   const hasAuthToken = Boolean(localStorage.getItem('auth_token'))
+  const [accountKind, setAccountKind] = useState(hasAuthToken ? 'unknown' : 'anonymous')
   const isDesignPreview =
     new URLSearchParams(window.location.search).get('preview') === 'true'
 
   useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname.replace(/\/+$/, '') || '/')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (!hasAuthToken) return undefined
+
+    let isCurrent = true
+    fetchCurrentUser()
+      .then((profile) => {
+        if (isCurrent) setAccountKind(accountKindFor(profile))
+      })
+      .catch(() => {
+        if (isCurrent) setAccountKind('error')
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [hasAuthToken])
+
+  useEffect(() => {
+    if ((isAdminPage || isSignatoryPage) && !hasAuthToken) {
+      window.location.replace(`/login?next=${encodeURIComponent(currentPath)}`)
+      return
+    }
     if (isDashboardPage && !hasAuthToken && !isDesignPreview) {
       window.location.replace('/login')
       return
     }
-    if (isLoginPage && hasAuthToken) {
-      window.location.replace('/dashboard')
+    if (accountKind === 'admin' && (isDashboardPage || isLoginPage || isSignatoryPage)) {
+      window.location.replace('/admin')
       return
     }
+    if (accountKind === 'signatory' && (isDashboardPage || isLoginPage || isAdminPage)) {
+      window.location.replace('/signatory')
+      return
+    }
+    if (accountKind === 'student' && (isAdminPage || isLoginPage || isSignatoryPage)) {
+      window.location.replace('/dashboard')
+    }
 
-    document.title = isLoginPage
-      ? 'Account Access | ClearanceDNSC'
-      : isDashboardPage
+    document.title = isForgotPasswordPage
+      ? 'Forgot Password | ClearanceDNSC'
+      : isLoginPage
+        ? 'Account Access | ClearanceDNSC'
+        : isDashboardPage
         ? 'Student Dashboard | ClearanceDNSC'
-        : 'ClearanceDNSC | Student Clearance, Simplified'
-  }, [hasAuthToken, isDashboardPage, isDesignPreview, isLoginPage])
+        : isAdminPage
+          ? 'Admin Portal | ClearanceDNSC'
+          : isSignatoryPage
+            ? 'Signatory Portal | ClearanceDNSC'
+            : 'ClearanceDNSC | Student Clearance, Simplified'
+  }, [accountKind, currentPath, hasAuthToken, isAdminPage, isDashboardPage, isDesignPreview, isForgotPasswordPage, isLoginPage, isSignatoryPage])
 
-  if (isDashboardPage) {
-    return hasAuthToken || isDesignPreview ? <StudentDashboard /> : null
+  if (hasAuthToken && accountKind === 'unknown' && (isAdminPage || isDashboardPage || isLoginPage || isSignatoryPage)) {
+    return <PortalLoading title="Checking your account" detail="Confirming which portal this sign-in should open." />
   }
+  if (accountKind === 'error' && (isAdminPage || isDashboardPage || isSignatoryPage)) {
+    return (
+      <div role="alert">
+        <p>Could not confirm this account. Please sign in again.</p>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('auth_token')
+            localStorage.removeItem('auth_refresh_token')
+            window.location.assign('/login')
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    )
+  }
+  if (isSignatoryPage) {
+    return hasAuthToken && accountKind === 'signatory' ? (
+      <Suspense fallback={<PortalLoading title="Loading the signatory portal" detail="Opening the approval queue for this account." />}>
+        <SignatoryPortal />
+      </Suspense>
+    ) : null
+  }
+  if (isAdminPage) {
+    return hasAuthToken && accountKind === 'admin' ? (
+      <Suspense fallback={<PortalLoading title="Loading the admin portal" detail="Opening the institute dashboard." />}>
+        <AdminPortal />
+      </Suspense>
+    ) : null
+  }
+  if (isDashboardPage) {
+    if (isDesignPreview && !hasAuthToken) return <StudentDashboard />
+    return hasAuthToken && accountKind === 'student' ? <StudentDashboard /> : null
+  }
+  if (isForgotPasswordPage) return <ForgotPasswordPage />
   if (isLoginPage && hasAuthToken) return null
   return isLoginPage ? <LoginPage /> : <HomePage />
 }
