@@ -1,28 +1,29 @@
 import { useState } from "react";
 import { Calendar } from "lucide-react";
-import { termInfo, approvalChain } from "../data/mockData.js";
 import "./SidebarPanel.css";
 
 const filters = ["Today", "Last 7 days", "Last 30 days", "Term to date", "Custom"];
 
-export default function SidebarPanel() {
+export default function SidebarPanel({ term, loading = false }) {
   const [activeFilter, setActiveFilter] = useState("Term to date");
   const [fromDate, setFromDate] = useState("2026-08-01");
   const [toDate, setToDate] = useState("2026-11-10");
+  const approvalChain = term?.chain ?? [];
+  const yearLine = [term?.semester, term?.academicYear].filter(Boolean).join(" · ");
 
   return (
     <aside className="sidebar-panel">
       {/* Term label + badge */}
       <div className="sidebar-term-label">
         <span>Active Term</span>
-        <div className="sidebar-status-badge">
+        <div className={"sidebar-status-badge" + (term?.open ? "" : " sidebar-status-badge--idle")}>
           <span className="sidebar-status-dot" />
-          Clearance Open
+          {loading ? "Loading" : term?.statusLabel || "No term"}
         </div>
       </div>
 
-      <h2 className="sidebar-title">{termInfo.title}</h2>
-      <p className="sidebar-year">{termInfo.academicYear} &middot; {termInfo.semester}</p>
+      <h2 className="sidebar-title">{loading ? "Loading clearance…" : term?.title || "No clearance issued"}</h2>
+      {yearLine ? <p className="sidebar-year">{yearLine}</p> : null}
 
       <div className="sidebar-divider" />
 
@@ -30,19 +31,19 @@ export default function SidebarPanel() {
       <div className="sidebar-info-list">
         <div className="sidebar-info-row">
           <span className="sidebar-info-label">Target year levels:</span>
-          <span className="sidebar-info-value">{termInfo.targetYearLevels}</span>
+          <span className="sidebar-info-value">{term?.targetYearLevels || "—"}</span>
         </div>
         <div className="sidebar-info-row">
           <span className="sidebar-info-label">Issued on:</span>
-          <span className="sidebar-info-value">{termInfo.issuedOn}</span>
+          <span className="sidebar-info-value">{term?.issuedOn || "—"}</span>
         </div>
         <div className="sidebar-info-row">
           <span className="sidebar-info-label">Students issued:</span>
-          <span className="sidebar-info-value">{termInfo.studentsIssued.toLocaleString()}</span>
+          <span className="sidebar-info-value">{(term?.studentsIssued ?? 0).toLocaleString()}</span>
         </div>
         <div className="sidebar-info-row">
           <span className="sidebar-info-label">Signatory offices:</span>
-          <span className="sidebar-info-value">{termInfo.signatoryOffices} sequential steps</span>
+          <span className="sidebar-info-value">{term?.signatoryOffices ?? 0} sequential steps</span>
         </div>
       </div>
 
@@ -51,12 +52,16 @@ export default function SidebarPanel() {
       {/* Approval chain */}
       <p className="sidebar-section-label">Approval Chain</p>
       <div className="sidebar-approval-chain">
-        {approvalChain.map((item) => (
-          <div key={item.step} className="sidebar-chain-step">
-            <div className="sidebar-chain-num">{item.step}</div>
-            <span className="sidebar-chain-name">{item.label}</span>
-          </div>
-        ))}
+        {approvalChain.length === 0 ? (
+          <span className="sidebar-chain-empty">{loading ? "Loading steps…" : "No signatory steps yet"}</span>
+        ) : (
+          approvalChain.map((item) => (
+            <div key={`${item.step}-${item.label}`} className="sidebar-chain-step">
+              <div className="sidebar-chain-num">{item.step}</div>
+              <span className="sidebar-chain-name">{item.label}</span>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="sidebar-divider" />

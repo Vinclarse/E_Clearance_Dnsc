@@ -39,14 +39,15 @@ html, body {
   min-height: 100vh;
   font-size: 14px;
   line-height: 1.5;
-  /* Fixed 1920×1200 reference canvas */
-  min-width: 1280px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
   max-width: 1920px;
   margin: 0 auto;
 }
@@ -72,12 +73,31 @@ input, select {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--bg-page);
 }
 
 .page-content {
   padding: 24px 32px;
   flex: 1;
+}
+
+@media (max-width: 800px) {
+  .page-content {
+    padding: 16px 12px;
+  }
+}
+
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll > table {
+  min-width: 680px;
 }
 
 .card {
