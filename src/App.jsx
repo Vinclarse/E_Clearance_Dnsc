@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import PortalLoading from './components/PortalLoading.jsx'
@@ -436,6 +436,17 @@ function ForgotPasswordPage() {
   )
 }
 
+function GoogleGlyph() {
+  return (
+    <svg className="login-google-mark" viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" />
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" />
+    </svg>
+  )
+}
+
 function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [loginMessage, setLoginMessage] = useState(() =>
@@ -449,7 +460,7 @@ function LoginPage() {
   const googleButtonRef = useRef(null)
   const [googleButtonWidth, setGoogleButtonWidth] = useState(0)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const button = googleButtonRef.current
     if (!button) return undefined
 
@@ -613,33 +624,44 @@ function LoginPage() {
             {googleClientId ? (
               <div
                 ref={googleButtonRef}
-                className="login-google-button-container"
-                aria-disabled={isSubmitting || isGoogleSubmitting}
+                className={`login-google-slot${isSubmitting || isGoogleSubmitting ? ' is-busy' : ''}`}
               >
-                <GoogleOAuthProvider clientId={googleClientId} locale="en">
-                  {googleButtonWidth > 0 && (
-                    <GoogleLogin
-                      key={googleButtonWidth}
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setLoginMessage('Google sign-in could not start. Allow popups for this site, then try again.')}
-                      text="continue_with"
-                      size="medium"
-                      theme="outline"
-                      shape="rectangular"
-                      logo_alignment="left"
-                      width={googleButtonWidth}
-                      use_fedcm_for_button={false}
-                    />
-                  )}
-                </GoogleOAuthProvider>
+                <span className="login-google-face" aria-hidden="true">
+                  <span className="login-google-mark-wrap">
+                    <GoogleGlyph />
+                  </span>
+                  {isGoogleSubmitting ? 'Signing in…' : 'Continue with Google'}
+                </span>
+                {/* Google's iframe stays on top and invisible so the click still reaches it. */}
+                <div className="login-google-overlay">
+                  <GoogleOAuthProvider clientId={googleClientId} locale="en">
+                    {googleButtonWidth > 0 && (
+                      <GoogleLogin
+                        key={googleButtonWidth}
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setLoginMessage('Google sign-in could not start. Allow popups for this site, then try again.')}
+                        text="continue_with"
+                        size="large"
+                        theme="outline"
+                        shape="rectangular"
+                        logo_alignment="left"
+                        width={googleButtonWidth}
+                        use_fedcm_for_button={false}
+                      />
+                    )}
+                  </GoogleOAuthProvider>
+                </div>
               </div>
             ) : (
               <button
-                className="login-google-button"
+                className="login-google-face login-google-face-button"
                 type="button"
                 disabled
                 title="Set VITE_GOOGLE_CLIENT_ID to enable Google sign-in."
               >
+                <span className="login-google-mark-wrap">
+                  <GoogleGlyph />
+                </span>
                 Google sign-in needs setup
               </button>
             )}
