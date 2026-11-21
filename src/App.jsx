@@ -1024,7 +1024,7 @@ function App() {
   }
   if (isAdminPage) {
     return hasAuthToken && accountKind === 'admin' ? (
-      <Suspense fallback={<PortalLoading title="Loading the admin portal" detail="Opening the institute dashboard." />}>
+      <Suspense fallback={<PortalLoading title="Loading the admin portal" detail="Opening the admin dashboard." />}>
         <AdminPortal />
       </Suspense>
     ) : null
