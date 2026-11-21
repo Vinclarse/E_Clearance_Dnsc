@@ -1369,7 +1369,7 @@ h1 {
 .login-google-slot {
   position: relative;
   width: 100%;
-  height: 48px;
+  min-height: 40px;
   margin-top: 0.15rem;
 }
 
@@ -1377,7 +1377,7 @@ h1 {
   position: relative;
   display: flex;
   width: 100%;
-  height: 48px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border: 1px solid #d5dacd;
@@ -1424,19 +1424,17 @@ h1 {
   height: 18px;
 }
 
-.login-google-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  border-radius: 8px;
-  opacity: 0;
+.login-google-real {
+  width: 100%;
 }
 
-.login-google-overlay > div,
-.login-google-overlay iframe {
-  width: 100% !important;
-  height: 48px !important;
+.login-google-real [role="button"] {
+  border-color: #d5dacd !important;
+  border-radius: 8px !important;
+}
+
+.login-google-real > div {
+  width: 100%;
 }
 
 .login-google-slot.is-busy {
