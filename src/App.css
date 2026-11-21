@@ -1384,6 +1384,7 @@ h1 {
   display: block;
   width: 100%;
   height: 48px;
+  overflow: hidden;
   border-radius: 10px;
 }
 
@@ -1411,21 +1412,17 @@ h1 {
   height: 21px;
 }
 
-/* Google draws its own button in this layer. Clear that paint so the
-   designed button stays visible, and stretch the real control over it. */
+/* Google's own button, logo, and extra frame stay invisible.
+   Only the designed button shows, and the real control still fills it. */
 .login-google-button-container > div {
   position: absolute !important;
   z-index: 1;
   inset: 0;
   width: 100% !important;
-  height: 100% !important;
+  height: 48px !important;
   margin: 0 !important;
-}
-
-.login-google-button-container > div > div,
-.login-google-button-container .S9gUrf-YoZ4jf {
-  width: 100% !important;
-  height: 100% !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
 }
 
 .login-google-button-container [role="button"] {
@@ -1433,23 +1430,7 @@ h1 {
   height: 48px !important;
   min-height: 48px !important;
   margin: 0 !important;
-  border: 0 !important;
-  border-radius: 10px !important;
-  background: transparent !important;
-  box-shadow: none !important;
   cursor: pointer;
-}
-
-.login-google-button-container [role="button"] * {
-  opacity: 0 !important;
-}
-
-.login-google-button-container iframe {
-  position: absolute;
-  width: 0 !important;
-  height: 0 !important;
-  border: 0;
-  pointer-events: none;
 }
 
 .login-google-button-container:hover .login-google-button-art {
