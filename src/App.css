@@ -1414,7 +1414,8 @@ h1 {
 
 /* Google's own button, logo, and extra frame stay invisible.
    Only the designed button shows, and the real control still fills it. */
-.login-google-button-container > div {
+.login-google-button-container > div,
+.login-google-button-container .S9gUrf-YoZ4jf {
   position: absolute !important;
   z-index: 1;
   inset: 0;
@@ -1426,11 +1427,18 @@ h1 {
 }
 
 .login-google-button-container [role="button"] {
+  position: absolute !important;
+  z-index: 1;
+  inset: 0 !important;
   width: 100% !important;
   height: 48px !important;
   min-height: 48px !important;
   margin: 0 !important;
   cursor: pointer;
+}
+
+.login-google-button-container [role="button"] * {
+  opacity: 0 !important;
 }
 
 .login-google-button-container:hover .login-google-button-art {
