@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import PortalLoading from './components/PortalLoading.jsx'
@@ -446,6 +446,23 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ''
+  const googleButtonRef = useRef(null)
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(360)
+
+  useEffect(() => {
+    const button = googleButtonRef.current
+    if (!button) return undefined
+
+    const measure = () => {
+      const next = Math.max(200, Math.min(400, Math.round(button.clientWidth)))
+      setGoogleButtonWidth((current) => (current === next ? current : next))
+    }
+
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(button)
+    return () => observer.disconnect()
+  }, [googleClientId])
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -595,6 +612,7 @@ function LoginPage() {
             </button>
             {googleClientId ? (
               <div
+                ref={googleButtonRef}
                 className="login-google-button-container"
                 aria-disabled={isSubmitting || isGoogleSubmitting}
               >
@@ -610,13 +628,13 @@ function LoginPage() {
                   </span>
                   <GoogleLogin
                     onSuccess={handleGoogleSuccess}
-                    onError={() => setLoginMessage('Google sign-in failed. Please try again.')}
+                    onError={() => setLoginMessage('Google sign-in could not start. Allow popups for this site, then try again.')}
                     text="continue_with"
                     size="large"
                     theme="outline"
                     shape="rectangular"
                     logo_alignment="left"
-                    width="400"
+                    width={googleButtonWidth}
                   />
                 </GoogleOAuthProvider>
               </div>
