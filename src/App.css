@@ -1329,8 +1329,7 @@ h1 {
   background: var(--green-700);
 }
 
-.login-submit-button,
-.login-google-button {
+.login-submit-button {
   position: relative;
   display: flex;
   min-height: 48px;
@@ -1367,40 +1366,82 @@ h1 {
   filter: brightness(0) invert(1);
 }
 
-.login-google-button {
-  gap: 0.65rem;
-  color: var(--green-900);
-  background: rgb(255 255 255 / 42%);
-  font-weight: 600;
+.login-google-slot {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  margin-top: 0.15rem;
 }
 
-.login-google-button:disabled {
+.login-google-face {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d5dacd;
+  border-radius: 8px;
+  color: var(--green-900);
+  background: #fff;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+
+.login-google-face-button {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.login-google-face-button:disabled {
   cursor: not-allowed;
   opacity: 0.72;
 }
 
-.login-google-button-container {
-  display: flex;
-  width: 100%;
-  min-height: 40px;
-  margin-top: 0.15rem;
-  align-items: center;
-  justify-content: center;
+.login-google-slot:hover .login-google-face,
+.login-google-face-button:hover:not(:disabled) {
+  border-color: #c5ccbe;
+  background: #f7f8f4;
 }
 
-/* Leave Google's own button untouched. Stretching or hiding it
-   blocks the click and cannot remove the account name inside it. */
-.login-google-button-container > div {
-  width: 100%;
+.login-google-slot:focus-within .login-google-face {
+  border-color: var(--green-700);
+  box-shadow: 0 0 0 3px rgb(81 102 76 / 14%);
 }
 
-.login-google-button-container[aria-disabled="true"] {
+.login-google-mark-wrap {
+  position: absolute;
+  left: 0.95rem;
+  display: inline-flex;
+}
+
+.login-google-mark {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.login-google-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  opacity: 0;
+}
+
+.login-google-overlay > div,
+.login-google-overlay iframe {
+  width: 100% !important;
+  height: 48px !important;
+}
+
+.login-google-slot.is-busy {
   pointer-events: none;
   opacity: 0.6;
-}
-
-.login-google-button:hover {
-  background: #fff;
 }
 
 .login-message {
