@@ -25,31 +25,27 @@ function groupNames(profile) {
     .filter(Boolean);
 }
 
-export function isInstituteAdminAccount(profile) {
-  if (!profile || profile.is_superuser === true) return false;
-  const groups = groupNames(profile);
-  if (groups.some((name) => name.includes("clearance management"))) return false;
-  return groups.includes("institute admins");
+export function isAdminAccount(profile) {
+  if (!profile) return false;
+  if (profile.is_superuser === true) return true;
+  return groupNames(profile).some((name) => name.includes("clearance management"));
 }
 
 export function isSignatoryAccount(profile) {
-  if (!profile || isInstituteAdminAccount(profile)) return false;
-  if (profile.is_superuser === true) return true;
+  if (!profile || isAdminAccount(profile)) return false;
   const groups = groupNames(profile);
-  return groups.some(
-    (name) => name.includes("clearance management") || signatoryGroups.has(name),
-  );
+  return groups.includes("institute admins") || groups.some((name) => signatoryGroups.has(name));
 }
 
 export function accountKindFor(profile) {
-  if (isInstituteAdminAccount(profile)) return "admin";
+  if (isAdminAccount(profile)) return "admin";
   if (isSignatoryAccount(profile)) return "signatory";
   return "student";
 }
 
 export function homePathForAccount(profile) {
   const requestedPath = new URLSearchParams(window.location.search).get("next");
-  if (isInstituteAdminAccount(profile)) {
+  if (isAdminAccount(profile)) {
     return requestedPath === "/admin" || requestedPath?.startsWith("/admin/")
       ? requestedPath
       : "/admin";
