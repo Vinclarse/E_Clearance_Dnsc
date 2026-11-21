@@ -447,7 +447,7 @@ function LoginPage() {
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ''
   const googleButtonRef = useRef(null)
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(360)
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(0)
 
   useEffect(() => {
     const button = googleButtonRef.current
@@ -626,16 +626,19 @@ function LoginPage() {
                     </svg>
                     <span>Continue with Google</span>
                   </span>
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setLoginMessage('Google sign-in could not start. Allow popups for this site, then try again.')}
-                    text="continue_with"
-                    size="large"
-                    theme="outline"
-                    shape="rectangular"
-                    logo_alignment="left"
-                    width={googleButtonWidth}
-                  />
+                  {googleButtonWidth > 0 && (
+                    <GoogleLogin
+                      key={googleButtonWidth}
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setLoginMessage('Google sign-in could not start. Allow popups for this site, then try again.')}
+                      text="continue_with"
+                      size="large"
+                      theme="outline"
+                      shape="rectangular"
+                      logo_alignment="left"
+                      width={googleButtonWidth}
+                    />
+                  )}
                 </GoogleOAuthProvider>
               </div>
             ) : (
