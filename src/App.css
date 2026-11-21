@@ -1380,74 +1380,18 @@ h1 {
 }
 
 .login-google-button-container {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 48px;
-  overflow: hidden;
-  border-radius: 10px;
-}
-
-.login-google-button-art {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
   display: flex;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0.15rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--green-700);
-  border-radius: inherit;
-  color: var(--green-900);
-  background: rgb(255 255 255 / 42%);
-  font-size: 0.86rem;
-  font-weight: 600;
-  transition: background-color 160ms ease;
-  pointer-events: none;
 }
 
-.login-google-mark {
-  position: absolute;
-  left: 1.15rem;
-  width: 21px;
-  height: 21px;
-}
-
-/* Google's own button, logo, and extra frame stay invisible.
-   Only the designed button shows, and the real control still fills it. */
-.login-google-button-container > div,
-.login-google-button-container .S9gUrf-YoZ4jf {
-  position: absolute !important;
-  z-index: 1;
-  inset: 0;
-  width: 100% !important;
-  height: 48px !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-}
-
-.login-google-button-container [role="button"] {
-  position: absolute !important;
-  z-index: 1;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 48px !important;
-  min-height: 48px !important;
-  margin: 0 !important;
-  cursor: pointer;
-}
-
-.login-google-button-container [role="button"] * {
-  opacity: 0 !important;
-}
-
-.login-google-button-container:hover .login-google-button-art {
-  background: rgb(255 255 255 / 72%);
-}
-
-.login-google-button-container:focus-within .login-google-button-art {
-  outline: 3px solid #a9c28d;
-  outline-offset: -3px;
+/* Leave Google's own button untouched. Stretching or hiding it
+   blocks the click and cannot remove the account name inside it. */
+.login-google-button-container > div {
+  width: 100%;
 }
 
 .login-google-button-container[aria-disabled="true"] {
