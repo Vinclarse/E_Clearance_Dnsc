@@ -1,61 +1,87 @@
 # ClearanceDNSC
 
-A responsive student clearance management app built with React and Vite. Students can sign in through the E-Clearance API and access the protected student dashboard.
+A student clearance app for DNSC, built with React and Vite. Students sign in, see which offices still need to approve them, and track progress until clearance is complete. Clearance officers and administrators have their own pages.
 
-## Getting started
+## Run it locally
 
-Install dependencies and start the Vite development server:
+You need Node.js installed. From this folder:
 
 ```sh
 npm install
 npm run dev
 ```
 
-Available scripts:
+Vite prints a local address, usually `http://localhost:5173`. Open that in a browser.
 
-- `npm run dev` starts the development server.
-- `npm run build` creates the production build in `dist/`.
-- `npm run preview` serves the production build locally.
-- `npm run lint` checks the project with ESLint.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Starts the app for development. |
+| `npm run build` | Builds the app into `dist/` for deployment. |
+| `npm run preview` | Serves that production build on your machine. |
+| `npm run lint` | Checks the code with ESLint. |
 
-## Project structure
+## Pages
+
+| Address | Who it is for |
+| --- | --- |
+| `/` | Public homepage. |
+| `/login` | Sign-in and password recovery. |
+| `/dashboard` | Student clearance dashboard. Requires sign-in. |
+| `/signatory` | Clearance officer workspace. Requires sign-in. |
+| `/admin` | Administrator portal. Requires sign-in. |
+
+Opening a protected page while signed out sends you to `/login`. After a successful sign-in, the app sends each account to the page that matches its role.
+
+Sign in with the account **username** and password. An email address works only when that email is also the account username.
+
+## What each role can do
+
+**Students** (`/dashboard`) can see their clearance checklist, notifications, and profile. The checklist loads every page of clearance items, so items past the first page still appear. They can also request a password reset from the sign-in page.
+
+**Clearance officers** (`/signatory`) review the clearance items assigned to them.
+
+**Administrators** (`/admin`) can open the executive dashboard, clearance templates, student directory, signatory roles, audit logs, profile, and settings. Those screens still use sample data. They are not wired to the E-Clearance API, and the server does not yet restrict them to administrator accounts. Connect them to real endpoints and enforce permissions before using them with live records.
+
+## Connecting to the API
+
+The app calls the E-Clearance API through a same-origin `/api` proxy. That avoids browser CORS errors.
+
+- While you run `npm run dev`, Vite forwards `/api` to the API.
+- On Vercel, a rewrite does the same thing.
+
+If you host the app somewhere else, set up the same kind of proxy, or allow this app's address in the API's CORS settings.
+
+`VITE_API_BASE_URL` in `.env.local` is optional. Leave it empty to keep using the proxy. Pointing it straight at the API only works if that API allows this app's origin.
+
+Copy `.env.example` to `.env.local` when you need local settings. Restart `npm run dev` after you change it.
+
+## Google sign-in
+
+The Google button stays off until a client ID is set. To turn it on:
+
+1. In Google Cloud Console, create an OAuth **Web application** client ID.
+2. Add this app's addresses as authorized JavaScript origins. For local work that is `http://localhost:5173` or `http://127.0.0.1:5173`, plus the deployed site address.
+3. Configure the E-Clearance API to accept that same client ID.
+4. Allow those same frontend addresses in the API's CORS settings.
+5. In `.env.local`, set `VITE_GOOGLE_CLIENT_ID` to the client ID, then restart Vite.
+
+The client ID is public. Do not put a Google client secret in any `VITE_` variable. Those values are shipped to the browser.
+
+## Project folders
 
 ```text
 .
 ├── index.html
 ├── public/
 ├── src/
-│   ├── App.jsx       # Landing page, sign-in, and route handling
-│   ├── AdminPortal.jsx # Mounts the administrator portal at /admin
-│   ├── App.css       # Shared page styles
-│   ├── index.css     # Stylesheet entry point
-│   ├── admin/        # Administrator portal screens and styles
-│   ├── components/   # Student dashboard components
-│   ├── pages/        # Student dashboard page
-│   ├── services/     # API client and authentication
-│   ├── styles/       # Dashboard styles
-│   └── assets/       # Illustrations, icons, and logos
+│   ├── App.jsx          # Homepage, sign-in, and which page to show
+│   ├── AdminPortal.jsx  # Administrator portal at /admin
+│   ├── pages/           # Student dashboard
+│   ├── components/      # Student dashboard pieces
+│   ├── admin/           # Administrator screens
+│   ├── signatory/       # Clearance officer screens
+│   ├── services/        # API calls and sign-in
+│   ├── styles/          # Dashboard styles
+│   └── assets/          # Images and icons
 └── vite.config.js
 ```
-
-The homepage is served at `/`, sign-in at `/login`, and the authenticated student dashboard at `/dashboard`. Sign-in sends the API's documented `username` and `password` fields to `POST /api/v1/login/`; use the username assigned to the account (an email works only if it is also that account's username). Successful access and refresh tokens are saved for authenticated API requests. Unauthenticated visits to `/dashboard` are redirected to `/login`.
-
-The administrator portal is available at `/admin` after signing in, with pages for the executive dashboard, clearance templates, student directory, signatory roles, audit logs, profile, and settings. The current portal screens use sample data and are not connected to the E-Clearance API; wire these views to supported API endpoints and enforce administrator permissions on the server before using them with live records.
-
-API requests use a same-origin proxy to avoid browser CORS failures: Vite proxies `/api` during local development, and the Vercel rewrite proxies it when deployed on Vercel. For a different deployment host, configure an equivalent proxy or have the API allow that frontend origin in its CORS settings. `VITE_API_BASE_URL` is an optional override; using the API's direct origin requires the API to allow the frontend's origin.
-
-The API client leaves `Content-Type` to Axios so JSON requests are encoded normally and `FormData` uploads receive the browser-generated multipart boundary required by the API.
-
-The student dashboard uses the documented `/me/`, `/student-clearances/my-clearances/`, and `/student-clearance-items/?student_clearance=<id>` endpoints. It follows the clearance-items pagination links so the dashboard shows the complete checklist, not just the first page. It also uses `/notifications/`, `/notifications/mark-all-read/`, `/cloudinary/`, and `/me/update/` for the features shown in the dashboard. Password recovery uses `/password-reset/request/`, `/password-reset/verify/`, and `/password-reset/change/`. Access tokens are refreshed through `/token/refresh/`, and sign-out revokes the refresh token through `/logout/`.
-
-## Google sign-in setup
-
-Google sign-in uses Google's Identity Services to obtain an ID token, then sends it to `POST /api/v1/auth/google/`. To enable the button:
-
-1. Create a Google OAuth **Web application** client ID in Google Cloud Console.
-2. Add the local app origin you use (`http://localhost:5173` or `http://127.0.0.1:5173`) and deployed app origin to the OAuth client's authorized JavaScript origins.
-3. Configure the E-Clearance API to accept the same client ID.
-4. Allow your local and deployed frontend origins in the API's CORS settings.
-5. Copy `.env.example` to `.env.local`, set `VITE_GOOGLE_CLIENT_ID` to your client ID, and restart Vite.
-
-The client ID is public browser configuration, not a client secret. Do not put a client secret in a `VITE_` variable. Google sign-in stays disabled until a client ID is configured.
