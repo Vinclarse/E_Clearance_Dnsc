@@ -458,9 +458,7 @@ function LoginPage() {
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? ''
   const googleButtonRef = useRef(null)
-  const googleRealRef = useRef(null)
   const [googleButtonWidth, setGoogleButtonWidth] = useState(0)
-  const [googleReady, setGoogleReady] = useState(false)
 
   useLayoutEffect(() => {
     const button = googleButtonRef.current
@@ -479,17 +477,6 @@ function LoginPage() {
     observer.observe(button)
     return () => observer.disconnect()
   }, [googleClientId])
-
-  useEffect(() => {
-    const node = googleRealRef.current
-    if (!node) return undefined
-
-    const mark = () => setGoogleReady(Boolean(node.querySelector('iframe')))
-    mark()
-    const observer = new MutationObserver(mark)
-    observer.observe(node, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, [googleClientId, googleButtonWidth])
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -642,15 +629,13 @@ function LoginPage() {
                 ref={googleButtonRef}
                 className={`login-google-slot${isSubmitting || isGoogleSubmitting ? ' is-busy' : ''}`}
               >
-                {!googleReady && (
-                  <span className="login-google-face" aria-hidden="true">
-                    <span className="login-google-mark-wrap">
-                      <GoogleGlyph />
-                    </span>
-                    {isGoogleSubmitting ? 'Signing in…' : 'Continue with Google'}
+                <span className="login-google-face" aria-hidden="true">
+                  <span className="login-google-mark-wrap">
+                    <GoogleGlyph />
                   </span>
-                )}
-                <div ref={googleRealRef} className="login-google-real">
+                  {isGoogleSubmitting ? 'Signing in…' : 'Continue with Google'}
+                </span>
+                <div className="login-google-real">
                   <GoogleOAuthProvider clientId={googleClientId} locale="en">
                     {googleButtonWidth > 0 && (
                       <GoogleLogin
