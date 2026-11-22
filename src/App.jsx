@@ -576,7 +576,7 @@ function LoginPage() {
             className="login-form"
             onSubmit={handleLogin}
           >
-            <label htmlFor="student-identifier">Student ID or Email</label>
+            <label htmlFor="student-identifier">Username</label>
             <input
               id="student-identifier"
               name="identifier"
