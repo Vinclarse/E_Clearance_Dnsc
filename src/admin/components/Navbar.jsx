@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { Bell, User, Settings, LogOut, Menu, X, LayoutDashboard, FileText, Users, BadgeCheck, ScrollText } from "lucide-react";
-import dnscLogo from "../../assets/dnsc-logo.jpg";
+import eclearanceLogo from "../../assets/eclearance-logo.png";
 import { signOut } from "../../services/auth.js";
 import { fetchNotifications, markAllNotificationsRead } from "../../services/notifications.js";
 import { fetchCurrentAdmin, fetchUnreadCount } from "../services/dashboardApi.js";
@@ -110,7 +110,7 @@ export default function Navbar() {
     <>
     <div className="portal-mobile-top">
       <NavLink to="/" className="portal-mobile-brand" onClick={() => { setShowAccount(false); setShowNotes(false); }}>
-        <img src={dnscLogo} alt="" />
+        <img src={eclearanceLogo} alt="" />
         <span>
           <strong>ClearanceDNSC</strong>
           <small>Admin Portal</small>
@@ -184,7 +184,7 @@ export default function Navbar() {
       {/* ── SECTION 1: Brand (white card — far left, OUTSIDE dark pill) ── */}
       <div className="nb-brand">
         <div className="nb-logo">
-          <img src={dnscLogo} alt="DNSC Logo" className="nb-logo-img" />
+          <img src={eclearanceLogo} alt="E-Clearance" className="nb-logo-img" />
         </div>
         <div className="nb-brand-text">
           <span className="nb-brand-name">Davao del Norte State College</span>

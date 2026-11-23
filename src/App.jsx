@@ -9,6 +9,7 @@ import {
   requestPasswordReset,
   verifyPasswordReset,
 } from './services/passwordReset.js'
+import eclearanceLogo from './assets/eclearance-logo.png'
 import arrowRight from './assets/arrow-right.svg'
 import dashboardIllustration from './assets/clearance-dashboard-illustration.svg'
 import eyeIcon from './assets/eye.png'
@@ -256,7 +257,9 @@ function ForgotPasswordPage() {
     <main className="reset-page">
       <section className="reset-intro" aria-labelledby="reset-intro-title">
         <a className="reset-brand" href="/" aria-label="E-Clearance System home">
-          <span className="reset-brand-mark" aria-hidden="true" />
+          <span className="reset-brand-mark" aria-hidden="true">
+            <img src={eclearanceLogo} alt="" />
+          </span>
           <span className="reset-brand-text">
             <strong>E-Clearance System</strong>
             <small>Davao del Norte State College</small>
@@ -524,7 +527,9 @@ function LoginPage() {
     <main className="login-page">
       <section className="login-intro" aria-labelledby="login-intro-title">
         <a className="login-brand" href="/" aria-label="ClearanceDNSC home">
-          <span className="login-brand-mark" aria-hidden="true" />
+          <span className="login-brand-mark" aria-hidden="true">
+            <img src={eclearanceLogo} alt="" />
+          </span>
           <span>ClearanceDNSC</span>
         </a>
         <div className="login-intro-copy">
@@ -734,7 +739,9 @@ function HomePage() {
       <header className="site-header">
         <div className="container header-content">
           <a className="brand" href="#home" aria-label="ClearanceDNSC home">
-            <span className="brand-mark" aria-hidden="true" />
+            <span className="brand-mark" aria-hidden="true">
+              <img src={eclearanceLogo} alt="" />
+            </span>
             <span>ClearanceDNSC</span>
           </a>
           <button

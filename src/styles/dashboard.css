@@ -2344,10 +2344,9 @@ width: 100% !important;
   }
 
   .dashboard-container .mobile-logo-badge img {
-    width: 38px;
-    height: 38px;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 8px rgb(34 48 32 / 12%);
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
   }
 
   .dashboard-container .mobile-brand-info h2 {
