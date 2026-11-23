@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import dnscLogo from '../assets/dnsc-logo.jpg';
+import eclearanceLogo from '../assets/eclearance-logo.png';
 
 const navTabs = [
   {
@@ -87,7 +87,7 @@ export default function SignatoryLayout({
     <div className="signatory-shell" style={{ backgroundColor: '#D7DCD0', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", padding: '1rem 1.5rem' }}>
       <div className="signatory-mobile-top">
         <button type="button" className="signatory-mobile-brand" onClick={() => onSelectPage('SIG1')}>
-          <img src={dnscLogo} alt="" />
+          <img src={eclearanceLogo} alt="" />
           <span>
             <strong>ClearanceDNSC</strong>
             <small>Signatory Portal</small>

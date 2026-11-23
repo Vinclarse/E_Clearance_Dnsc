@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import dnscLogo from "../assets/dnsc-logo.jpg";
+import eclearanceLogo from "../assets/eclearance-logo.png";
 import { signOut } from "../services/auth";
 import { fetchNotifications, markAllNotificationsRead } from "../services/notifications";
 import "../styles/navigation.css";
@@ -151,7 +151,7 @@ function MobileNavigation({
       <div className="mobile-top-bar">
         <button type="button" className="mobile-left-section" onClick={() => goTo("dashboard")}>
           <div className="mobile-logo-badge">
-            <img src={dnscLogo} alt="DNSC Logo" />
+            <img src={eclearanceLogo} alt="E-Clearance" />
           </div>
           <div className="mobile-brand-info">
             <h2>ClearanceDNSC</h2>

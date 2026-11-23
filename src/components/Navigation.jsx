@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import dnscLogo from "../assets/dnsc-logo.jpg";
+import eclearanceLogo from "../assets/eclearance-logo.png";
 import { signOut } from "../services/auth";
 import { fetchNotifications, markAllNotificationsRead } from "../services/notifications";
 import "../styles/navigation.css";
@@ -76,7 +76,7 @@ function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injected
         className="logo-section desktop-brand"
         onClick={(e) => handleTabClick(e, "dashboard")}
       >
-        <img src={dnscLogo} alt="DNSC Logo" />
+        <img src={eclearanceLogo} alt="E-Clearance" />
         <span className="desktop-brand-info">
           <strong>ClearanceDNSC</strong>
           <small>Student portal</small>
