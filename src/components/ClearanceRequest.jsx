@@ -1,6 +1,27 @@
 import { useState } from "react";
 import apiClient from "../services/api";
 
+function uploadErrorMessage(error) {
+  const responseData = error.response?.data;
+  const errorData = responseData?.data ?? responseData;
+  const errors = errorData?.errors ?? responseData?.errors;
+  const fieldError = Object.values(errors ?? {})
+    .flat()
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ");
+  const message =
+    (typeof errorData?.detail === "string" && errorData.detail) ||
+    (typeof errors?.detail === "string" && errors.detail) ||
+    fieldError ||
+    (typeof responseData?.message === "string" && responseData.message !== "Error"
+      ? responseData.message
+      : "");
+
+  if (message) return message;
+  if (!error.response) return "Could not reach the server. Check your connection and try again.";
+  return "UPLOAD FAILED. PLEASE TRY AGAIN.";
+}
+
 function ClearanceRequest({
   requirements,
   onUploadSuccess,
@@ -88,7 +109,7 @@ function ClearanceRequest({
     setUploadStatus("UPLOAD SUCCESSFUL");
     if (onUploadTriggered) onUploadTriggered(officeName);
     if (onUploadSuccess && typeof updatedItem?.status === "string") {
-      onUploadSuccess(activeSelectedItemId, updatedItem.status);
+      onUploadSuccess(activeSelectedItemId, updatedItem);
     }
     onUploadCompleted?.();
     setSuccessOfficeName(officeName);
@@ -119,8 +140,7 @@ function ClearanceRequest({
     })
     .catch((error) => {
       console.error("Failed to upload clearance proof:", error);
-      const detail = error.response?.data?.detail;
-      setUploadStatus(typeof detail === "string" ? detail : "UPLOAD FAILED. PLEASE TRY AGAIN.");
+      setUploadStatus(uploadErrorMessage(error));
     })
     .finally(() => {
       setIsUploading(false);
@@ -186,7 +206,7 @@ function ClearanceRequest({
                       disabled={isCleared || item.is_actionable === false}
                       style={{ color: isCleared ? "#a1a396" : "gray" }}
                     >
-                      Step {index + 1}: {item.requirement_name} {isCleared ? "✓ (APPROVED)" : `(${item.status.toUpperCase().replace("_", " ")})`}
+                      Step {index + 1}: {item.requirement_name} {isCleared ? "✓ (APPROVED)" : `(${item.status.toUpperCase().replace("_", " ")})`}{item.proof_attachment || item.proof_uploaded_at ? " · proof submitted" : ""}
                     </option>
                   );
                 })}
