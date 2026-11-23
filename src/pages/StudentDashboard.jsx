@@ -230,11 +230,16 @@ function StudentDashboard() {
     setAvatarPreview(newUrl);
   };
 
-  const handleGlobalStatusUpdate = (itemId, newStatus) => {
+  const handleGlobalStatusUpdate = (itemId, updatedItem) => {
+    const newStatus = typeof updatedItem === "string" ? updatedItem : updatedItem?.status;
     setRequirements((prevItems) =>
       prevItems.map((item) =>
         item.id === parseInt(itemId)
-          ? { ...item, status: newStatus === "has_issue" ? "deficiency" : newStatus }
+          ? {
+              ...item,
+              ...(updatedItem && typeof updatedItem === "object" ? updatedItem : {}),
+              status: newStatus === "has_issue" ? "deficiency" : (newStatus || item.status),
+            }
           : item
       )
     );
