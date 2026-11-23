@@ -132,7 +132,7 @@ export default function SIG2({ students, onUpdateStudent }) {
         </div>
 
         <div className="signatory-table-scroll">
-        <table className="signatory-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+        <table className="signatory-table signatory-approval-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
           <thead>
             <tr style={{ color: '#74806E', borderBottom: '2px solid #EDF1E8', textAlign: 'left' }}>
               <th style={{ padding: '0.75rem 0' }}>STUDENT</th>
@@ -293,9 +293,9 @@ export default function SIG2({ students, onUpdateStudent }) {
         </div>
 
         {/* Pagination Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: '#74806E' }}>
+        <div className="signatory-queue-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: '#74806E' }}>
           <span>Showing {firstRecord}–{lastRecord} of {filteredStudents.length} records</span>
-          <div style={{ display: 'flex', gap: '0.3rem' }}>
+          <nav aria-label="Approval queue pagination" style={{ display: 'flex', gap: '0.3rem' }}>
             <button
               type="button"
               aria-label="Previous page"
@@ -317,6 +317,15 @@ export default function SIG2({ students, onUpdateStudent }) {
               <button
                 key={page}
                 type="button"
+                className={
+                  page === 1 ||
+                  page === pageCount ||
+                  page === activePage ||
+                  page === activePage - 1 ||
+                  page === activePage + 1
+                    ? 'signatory-page-mobile-visible'
+                    : 'signatory-page-mobile-hide'
+                }
                 aria-current={activePage === page ? 'page' : undefined}
                 onClick={() => setCurrentPage(page)}
                 style={{
@@ -350,7 +359,7 @@ export default function SIG2({ students, onUpdateStudent }) {
             >
               ›
             </button>
-          </div>
+          </nav>
         </div>
 
       </div>

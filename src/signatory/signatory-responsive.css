@@ -290,6 +290,176 @@
     margin-inline: auto;
     padding: 0 12px 12px;
   }
+
+  .signatory-approval-panel {
+    padding: 1rem !important;
+  }
+
+  .signatory-approval-panel > div:first-child {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .signatory-approval-panel > div:first-child > span {
+    align-self: flex-start;
+  }
+
+  .signatory-approval-table {
+    min-width: 0 !important;
+  }
+
+  .signatory-approval-table thead {
+    display: none;
+  }
+
+  .signatory-approval-table tbody {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .signatory-approval-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem 0.65rem;
+    width: 100%;
+    border: 1px solid #edf1e8;
+    border-radius: 14px;
+    padding: 0.75rem;
+  }
+
+  .signatory-approval-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 0 !important;
+  }
+
+  .signatory-approval-table td:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .signatory-approval-table td:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .signatory-approval-table td:nth-child(3) {
+    grid-column: 2;
+    align-self: end;
+  }
+
+  .signatory-approval-table td:nth-child(4),
+  .signatory-approval-table td:nth-child(5) {
+    display: none;
+  }
+
+  .signatory-approval-table td:nth-child(6) {
+    grid-column: 1 / -1;
+  }
+
+  .signatory-approval-table td:nth-child(6) > div {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .signatory-approval-table td:nth-child(6) button {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 0.35rem !important;
+  }
+
+  .signatory-queue-pagination {
+    flex-direction: column;
+    align-items: center !important;
+    gap: 0.65rem;
+  }
+
+  .signatory-queue-pagination nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .signatory-cohort-roster-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .signatory-cohort-filters {
+    width: 100%;
+  }
+
+  .signatory-cohort-filters button {
+    min-width: 0;
+  }
+
+  .signatory-dashboard .signatory-table-scroll,
+  .signatory-cohort-page .signatory-table-scroll {
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .signatory-dashboard .signatory-table,
+  .signatory-cohort-page .signatory-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .signatory-dashboard .signatory-table thead,
+  .signatory-cohort-page .signatory-table thead {
+    display: none;
+  }
+
+  .signatory-dashboard .signatory-table tbody,
+  .signatory-dashboard .signatory-table tr,
+  .signatory-dashboard .signatory-table td,
+  .signatory-cohort-page .signatory-table tbody,
+  .signatory-cohort-page .signatory-table tr,
+  .signatory-cohort-page .signatory-table td {
+    min-width: 0;
+  }
+
+  .signatory-dashboard .signatory-table tbody,
+  .signatory-cohort-page .signatory-table tbody {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .signatory-dashboard .signatory-table tr,
+  .signatory-cohort-page .signatory-table tr {
+    display: block;
+    width: 100%;
+    border: 1px solid #edf1e8;
+    border-radius: 14px;
+    padding: 0.75rem;
+  }
+
+  .signatory-dashboard .signatory-table td,
+  .signatory-cohort-page .signatory-table td {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0 !important;
+    text-align: left !important;
+  }
+
+  .signatory-cohort-page .signatory-table td:nth-child(2) > div {
+    flex-wrap: wrap;
+  }
+
+  .signatory-pagination-mobile {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center !important;
+  }
+
+  .signatory-pagination-mobile nav {
+    justify-content: center;
+  }
+
+  .signatory-page-mobile-hide {
+    display: none;
+  }
 }
 
 .portal-loading {
@@ -329,6 +499,12 @@
 @media (max-width: 640px) {
   .signatory-shell {
     padding: 0.75rem 0.75rem calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: clip;
+  }
+
+  .signatory-main {
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   .signatory-header {
@@ -375,6 +551,10 @@
     justify-content: flex-start;
   }
 
+  .signatory-cohort-filters button {
+    min-width: 0;
+  }
+
   .signatory-metrics-grid > * {
     flex: 1 1 130px;
   }
@@ -402,5 +582,117 @@
   .signatory-modal {
     width: calc(100vw - 2rem) !important;
     padding: 1rem !important;
+  }
+
+  .signatory-dashboard .signatory-table-scroll,
+  .signatory-cohort-page .signatory-table-scroll {
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .signatory-dashboard .signatory-table,
+  .signatory-cohort-page .signatory-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .signatory-dashboard .signatory-table thead,
+  .signatory-cohort-page .signatory-table thead {
+    display: none;
+  }
+
+  .signatory-table tbody,
+  .signatory-table tr,
+  .signatory-table td {
+    min-width: 0;
+  }
+
+  .signatory-dashboard .signatory-table tbody,
+  .signatory-cohort-page .signatory-table tbody {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .signatory-dashboard .signatory-table tr,
+  .signatory-cohort-page .signatory-table tr {
+    width: 100%;
+    border: 1px solid #edf1e8;
+    border-radius: 14px;
+    padding: 0.75rem;
+  }
+
+  .signatory-dashboard .signatory-table tbody,
+  .signatory-dashboard .signatory-table tr,
+  .signatory-dashboard .signatory-table td,
+  .signatory-cohort-page .signatory-table tbody,
+  .signatory-cohort-page .signatory-table tr,
+  .signatory-cohort-page .signatory-table td {
+    display: block;
+  }
+
+  .signatory-dashboard .signatory-table td,
+  .signatory-cohort-page .signatory-table td {
+    width: 100%;
+    padding: 0.35rem 0 !important;
+    text-align: left !important;
+  }
+
+  .signatory-dashboard .signatory-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem 0.6rem;
+  }
+
+  .signatory-dashboard .signatory-table td:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .signatory-dashboard .signatory-table td:nth-child(2),
+  .signatory-dashboard .signatory-table td:nth-child(3),
+  .signatory-dashboard .signatory-table td:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  .signatory-cohort-page .signatory-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+
+  .signatory-cohort-page .signatory-table td:nth-child(2) > div {
+    flex-wrap: wrap;
+  }
+
+  .signatory-cohort-filters {
+    width: 100%;
+  }
+
+  .signatory-cohort-roster-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .signatory-cohort-page > div:last-child {
+    min-width: 0;
+  }
+
+  .signatory-dashboard nav[aria-label="Queue pagination"],
+  .signatory-approval-page > div:last-child > div {
+    max-width: 100%;
+  }
+
+  .signatory-pagination-mobile {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center !important;
+  }
+
+  .signatory-pagination-mobile nav {
+    justify-content: center;
+  }
+
+  .signatory-page-mobile-hide {
+    display: none;
   }
 }
