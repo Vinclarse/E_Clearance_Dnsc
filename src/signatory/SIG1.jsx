@@ -164,7 +164,7 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
             </tbody>
           </table>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem', fontSize: '0.78rem', color: '#74806E' }}>
+          <div className="signatory-pagination-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem', fontSize: '0.78rem', color: '#74806E' }}>
             <span>Showing {firstRecord}–{lastRecord} of {queue.length} records</span>
             <nav aria-label="Queue pagination" style={{ display: 'flex', gap: '0.3rem' }}>
               <button
@@ -188,6 +188,15 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
                 <button
                   key={page}
                   type="button"
+                  className={
+                    page === 1 ||
+                    page === pageCount ||
+                    page === activePage ||
+                    page === activePage - 1 ||
+                    page === activePage + 1
+                      ? 'signatory-page-mobile-visible'
+                      : 'signatory-page-mobile-hide'
+                  }
                   aria-current={activePage === page ? 'page' : undefined}
                   onClick={() => setCurrentPage(page)}
                   style={{

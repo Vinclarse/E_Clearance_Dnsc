@@ -166,7 +166,7 @@ export default function SIG5({ students, onUpdateStudent }) {
       {/* Roster & Sign-off Table */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+        <div className="signatory-cohort-roster-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
           <h3 style={{ margin: 0, color: '#29352A', fontSize: '1.1rem' }}>Department Student Roster</h3>
           
           <div className="signatory-cohort-filters" style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#EDF1E8', padding: '0.25rem', borderRadius: '30px' }}>
