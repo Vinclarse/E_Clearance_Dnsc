@@ -1,9 +1,10 @@
-import apiClient from "./api";
+import apiClient, { clearReadCache } from "./api";
 
 export function signOut() {
   const refresh = localStorage.getItem("auth_refresh_token");
 
   const clearLocalSession = () => {
+    clearReadCache();
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_refresh_token");
     sessionStorage.setItem("signed-out", "true");

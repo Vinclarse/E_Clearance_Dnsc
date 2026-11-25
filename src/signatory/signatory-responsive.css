@@ -53,14 +53,16 @@
 .signatory-nav {
   flex: 1 1 auto;
   justify-content: space-between;
-  max-width: 1000px;
-  margin-left: 1.5rem;
-  margin-right: 0.75rem;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   gap: 0.1rem !important;
 }
 
 .signatory-nav button {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
   justify-content: center;
   padding: 0 !important;
 }
@@ -145,7 +147,7 @@
   }
 
   .signatory-mobile-brand img,
-  .signatory-mobile-profile span {
+  .signatory-mobile-avatar {
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -157,14 +159,22 @@
     height: 40px;
     border-radius: 0;
     object-fit: contain;
+    background: transparent;
   }
 
-  .signatory-mobile-profile span {
+  .signatory-mobile-avatar {
     display: grid;
     place-items: center;
+    overflow: hidden;
     background: #fff;
     font-weight: 700;
     color: #3a3c30;
+  }
+
+  .signatory-mobile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .signatory-mobile-brand strong,
@@ -227,29 +237,46 @@
     gap: 8px;
   }
 
+  .signatory-mobile-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 92px;
+    line-height: 1.1;
+  }
+
+  .signatory-mobile-identity strong,
+  .signatory-mobile-identity small {
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .signatory-mobile-identity strong {
+    font-size: 0.72rem;
+    color: #1a2810;
+  }
+
+  .signatory-mobile-identity small,
+  .signatory-mobile-caret {
+    font-size: 0.62rem;
+    color: #666;
+  }
+
   .signatory-mobile-account {
     position: absolute;
     top: 52px;
     right: 12px;
-    width: min(240px, calc(100vw - 24px));
-    background: #2e3d28;
-    color: #fff;
-    border-radius: 16px;
-    padding: 12px;
     z-index: 40;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
 
-  .signatory-mobile-account button {
-    margin-top: 6px;
-    border: 0;
-    background: none;
-    color: #fff;
-    text-align: left;
-    font-weight: 600;
-    padding: 0;
+  .signatory-mobile-account .account-menu {
+    position: static;
   }
 
   .signatory-mobile-bottom {

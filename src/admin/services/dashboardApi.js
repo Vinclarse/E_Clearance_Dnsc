@@ -71,8 +71,8 @@ export async function fetchUnreadCount() {
   return Number(data?.unread_count ?? 0);
 }
 
-export async function fetchCurrentAdmin() {
-  const response = await apiClient.get("me/");
+export async function fetchCurrentAdmin(config) {
+  const response = await apiClient.get("me/", config);
   const data = unwrap(response);
   return Array.isArray(data) ? data[0] : data;
 }

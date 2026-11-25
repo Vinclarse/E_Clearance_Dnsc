@@ -59,12 +59,25 @@ export async function fetchStudents(params) {
 }
 
 export async function fetchPrograms() {
-  const response = await apiClient.get("programs/", { params: { per_page: 50, current_page: 1 } });
-  return readPage(unwrapEnvelope(response), 50).items.map((program) => ({
-    id: program.id,
-    name: program.name,
-    acronym: program.acronym || program.name,
-  }));
+  const items = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const response = await apiClient.get("programs/", { params: { per_page: 50, current_page: page } });
+    const parsed = readPage(unwrapEnvelope(response), 50);
+    items.push(...parsed.items);
+    if (parsed.items.length === 0 || page >= (parsed.pages || 1)) break;
+  }
+  const groups = new Map();
+  for (const program of items) {
+    const acronym = program.acronym || program.name;
+    const key = String(acronym || program.id).trim().toLowerCase();
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, { id: program.id, name: program.name, acronym, ids: [program.id] });
+    } else if (!existing.ids.some((id) => String(id) === String(program.id))) {
+      existing.ids.push(program.id);
+    }
+  }
+  return [...groups.values()];
 }
 
 export async function fetchRoles() {

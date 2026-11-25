@@ -29,6 +29,47 @@ function initials(student) {
   return letters || "ST";
 }
 
+function programOptionValue(program) {
+  return (program.ids || [program.id]).map(String).join(",");
+}
+
+function programMatches(program, studentProgram) {
+  return (program.ids || [program.id]).some((id) => String(id) === String(studentProgram));
+}
+
+async function fetchStudentsForPrograms(programIds, params) {
+  if (programIds.length <= 1) {
+    return fetchStudents({ ...params, program: programIds[0] || undefined });
+  }
+
+  const collected = [];
+  const seen = new Set();
+  for (const program of programIds) {
+    for (let current = 1; current <= 20; current += 1) {
+      const result = await fetchStudents({
+        ...params,
+        program,
+        current_page: current,
+        per_page: 100,
+      });
+      for (const student of result.items) {
+        const key = student.id ?? student.s_studentID;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        collected.push(student);
+      }
+      if (current >= (result.pages || 1) || result.items.length === 0) break;
+    }
+  }
+
+  const start = (params.current_page - 1) * params.per_page;
+  return {
+    items: collected.slice(start, start + params.per_page),
+    total: collected.length,
+    pages: Math.max(1, Math.ceil(collected.length / params.per_page)),
+  };
+}
+
 export default function StudentDirectory() {
   const fileRef = useRef(null);
   const [search, setSearch] = useState("");
@@ -89,11 +130,10 @@ export default function StudentDirectory() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchStudents({
+    fetchStudentsForPrograms(programId ? programId.split(",").filter(Boolean) : [], {
       current_page: page,
       per_page: PAGE_SIZE,
       search: query || undefined,
-      program: programId || undefined,
       s_set: section || undefined,
       s_status: status || undefined,
     })
@@ -125,6 +165,7 @@ export default function StudentDirectory() {
   if (loading && rows.length === 0 && !error) {
     return (
       <PortalLoading
+        variant="table"
         title="Loading the student directory"
         detail="Getting programs, year levels, and the current roster."
       />
@@ -258,7 +299,7 @@ export default function StudentDirectory() {
           <select className="sd2-select" value={programId} onChange={(event) => { setProgramId(event.target.value); setPage(1); }}>
             <option value="">All Programs</option>
             {programs.map((program) => (
-              <option key={program.id} value={program.id}>{program.acronym}</option>
+              <option key={programOptionValue(program)} value={programOptionValue(program)}>{program.acronym}</option>
             ))}
           </select>
           <select className="sd2-select" value={section} onChange={(event) => { setSection(event.target.value); setPage(1); }}>
@@ -295,7 +336,7 @@ export default function StudentDirectory() {
               ) : (
                 rows.map((student, index) => {
                   const cfg = STATUS_CFG[student.s_status] || STATUS_CFG.to_be_updated;
-                  const program = programs.find((item) => item.id === student.program);
+                  const program = programs.find((item) => programMatches(item, student.program));
                   return (
                     <tr key={student.id}>
                       <td className="sd2-td-id">{student.s_studentID}</td>

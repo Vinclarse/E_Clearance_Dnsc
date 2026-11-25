@@ -8,6 +8,7 @@ import {
 } from "../services/portalApi.js";
 import PasswordInput from "../../components/PasswordInput.jsx";
 import PortalLoading from "../../components/PortalLoading.jsx";
+import { publishAccount, subscribePortalRefresh } from "../../services/portalRefresh.js";
 import "./Profile.css";
 
 function profileImage(profile) {
@@ -34,22 +35,28 @@ export default function Profile() {
 
   useEffect(() => {
     let active = true;
-    fetchCurrentAdmin()
-      .then((account) => {
-        if (!active || !account) return;
-        setProfile(account);
-        setFirstName(account.first_name || "");
-        setLastName(account.last_name || "");
-        setAvatarSrc(profileImage(account));
-      })
-      .catch((loadError) => {
-        if (active) setError(apiErrorMessage(loadError, "Could not load this profile."));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    function loadProfile() {
+      setLoading(true);
+      fetchCurrentAdmin()
+        .then((account) => {
+          if (!active || !account) return;
+          setProfile(account);
+          setFirstName(account.first_name || "");
+          setLastName(account.last_name || "");
+          setAvatarSrc(profileImage(account));
+        })
+        .catch((loadError) => {
+          if (active) setError(apiErrorMessage(loadError, "Could not load this profile."));
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }
+    loadProfile();
+    const stopRefresh = subscribePortalRefresh(loadProfile);
     return () => {
       active = false;
+      stopRefresh();
     };
   }, []);
 
@@ -86,11 +93,13 @@ export default function Profile() {
         payload.append("last_name", lastName.trim());
         payload.append("profile", avatarFile);
       }
-      const updated = await updateCurrentUser(payload);
-      const next = { ...profile, ...updated, first_name: firstName.trim(), last_name: lastName.trim() };
+      await updateCurrentUser(payload);
+      const account = await fetchCurrentAdmin({ fresh: true });
+      const next = { ...account, first_name: firstName.trim(), last_name: lastName.trim() };
       setProfile(next);
       setAvatarFile(null);
       setAvatarSrc(profileImage(next) || avatarSrc);
+      publishAccount(next);
       setSaved("Profile saved.");
     } catch (saveError) {
       setError(apiErrorMessage(saveError, "Could not save this profile."));
@@ -134,7 +143,7 @@ export default function Profile() {
   }
 
   if (loading) {
-    return <PortalLoading title="Loading your profile" detail="Getting the account details for this sign-in." />;
+    return <PortalLoading variant="profile" title="Loading your profile" detail="Getting the account details for this sign-in." />;
   }
 
   return (

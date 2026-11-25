@@ -5,6 +5,7 @@ import eclearanceLogo from "../../assets/eclearance-logo.png";
 import { signOut } from "../../services/auth.js";
 import { fetchNotifications, markAllNotificationsRead } from "../../services/notifications.js";
 import { fetchCurrentAdmin, fetchUnreadCount } from "../services/dashboardApi.js";
+import { requestPortalRefresh, subscribeAccount, subscribePortalRefresh } from "../../services/portalRefresh.js";
 import "./Navbar.css";
 
 const navLinks = [
@@ -30,14 +31,23 @@ export default function Navbar() {
 
   useEffect(() => {
     let active = true;
-    Promise.allSettled([fetchCurrentAdmin(), fetchUnreadCount(), fetchNotifications()]).then(([account, unread, notes]) => {
-      if (!active) return;
-      if (account.status === "fulfilled") setProfile(account.value);
-      if (unread.status === "fulfilled") setNotifCount(unread.value);
-      if (notes.status === "fulfilled") setNotices(notes.value);
+    function loadHeader() {
+      Promise.allSettled([fetchCurrentAdmin(), fetchUnreadCount(), fetchNotifications()]).then(([account, unread, notes]) => {
+        if (!active) return;
+        if (account.status === "fulfilled") setProfile(account.value);
+        if (unread.status === "fulfilled") setNotifCount(unread.value);
+        if (notes.status === "fulfilled") setNotices(notes.value);
+      });
+    }
+    loadHeader();
+    const stopRefresh = subscribePortalRefresh(loadHeader);
+    const stopAccount = subscribeAccount((account) => {
+      if (active && account) setProfile(account);
     });
     return () => {
       active = false;
+      stopRefresh();
+      stopAccount();
     };
   }, []);
 
@@ -109,13 +119,13 @@ export default function Navbar() {
   return (
     <>
     <div className="portal-mobile-top">
-      <NavLink to="/" className="portal-mobile-brand" onClick={() => { setShowAccount(false); setShowNotes(false); }}>
+      <button type="button" className="portal-mobile-brand" aria-label="Refresh" onClick={() => { setShowAccount(false); setShowNotes(false); requestPortalRefresh(); }}>
         <img src={eclearanceLogo} alt="" />
         <span>
           <strong>ClearanceDNSC</strong>
           <small>Admin Portal</small>
         </span>
-      </NavLink>
+      </button>
       <div className="portal-mobile-actions">
         <button
           type="button"
@@ -182,15 +192,15 @@ export default function Navbar() {
     <div className="nb-wrapper">
 
       {/* ── SECTION 1: Brand (white card — far left, OUTSIDE dark pill) ── */}
-      <div className="nb-brand">
+      <button type="button" className="nb-brand" aria-label="Refresh" onClick={requestPortalRefresh}>
         <div className="nb-logo">
-          <img src={eclearanceLogo} alt="E-Clearance" className="nb-logo-img" />
+          <img src={eclearanceLogo} alt="" className="nb-logo-img" />
         </div>
         <div className="nb-brand-text">
           <span className="nb-brand-name">Davao del Norte State College</span>
           <span className="nb-brand-sub">{brandSub}</span>
         </div>
-      </div>
+      </button>
 
       <button
         type="button"

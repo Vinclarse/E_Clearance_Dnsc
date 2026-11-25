@@ -36,11 +36,25 @@ function ClearanceRequest({
   const [uploadStatus, setUploadStatus] = useState("AWAITING SELECTION");
   const [showReSubmitModal, setShowReSubmitModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [officeMenuOpen, setOfficeMenuOpen] = useState(false);
 
   // NEW: success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successOfficeName, setSuccessOfficeName] = useState("");
   const activeSelectedItemId = requestItemId ?? selectedItemId;
+  const officeChoices = requirements.map((item, index) => {
+    const isCleared = item.status && item.status.toLowerCase() === "cleared";
+    const locked = isCleared || item.is_actionable === false;
+    const statusLabel = isCleared
+      ? "APPROVED"
+      : String(item.status || "pending").toUpperCase().replace(/_/g, " ");
+    return {
+      id: String(item.id),
+      locked,
+      label: `Step ${index + 1}: ${item.requirement_name} (${statusLabel})${item.proof_attachment || item.proof_uploaded_at ? " · proof submitted" : ""}`,
+    };
+  });
+  const selectedOffice = officeChoices.find((choice) => choice.id === String(activeSelectedItemId));
 
   const handleOfficeDropdownChange = (e) => {
     const itemId = e.target.value;
@@ -65,6 +79,12 @@ function ClearanceRequest({
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (!file.type.startsWith("image/")) {
+        setFileAttachment(null);
+        setUploadStatus("CHOOSE AN IMAGE FILE");
+        e.target.value = "";
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
         setFileAttachment(null);
         setUploadStatus("FILE EXCEEDS 5MB LIMIT");
@@ -190,27 +210,40 @@ function ClearanceRequest({
           <form onSubmit={handlePreSubmitCheck} className="request-embedded-form-aligned">
             <div className="info-item-block-aligned">
               <label className="info-label-aligned">Select Office / Target Requirement</label>
-              <select
-                value={activeSelectedItemId}
-                onChange={handleOfficeDropdownChange}
-                required
-                className="request-dropdown-select-aligned"
-              >
-                <option value="">-- Choose an Office Requirement --</option>
-                {requirements.map((item, index) => {
-                  const isCleared = item.status && item.status.toLowerCase() === "cleared";
-                  return (
-                    <option
-                      key={item.id || index}
-                      value={item.id}
-                      disabled={isCleared || item.is_actionable === false}
-                      style={{ color: isCleared ? "#a1a396" : "gray" }}
-                    >
-                      Step {index + 1}: {item.requirement_name} {isCleared ? "✓ (APPROVED)" : `(${item.status.toUpperCase().replace("_", " ")})`}{item.proof_attachment || item.proof_uploaded_at ? " · proof submitted" : ""}
-                    </option>
-                  );
-                })}
-              </select>
+              <div className="request-office-menu">
+                <button
+                  type="button"
+                  className="request-dropdown-select-aligned"
+                  aria-haspopup="listbox"
+                  aria-expanded={officeMenuOpen}
+                  onClick={() => setOfficeMenuOpen((open) => !open)}
+                >
+                  <span>{selectedOffice?.label || "Choose an Office Requirement"}</span>
+                  <svg className="request-dropdown-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {officeMenuOpen && (
+                  <ul className="request-office-options" role="listbox">
+                    {officeChoices.map((choice) => (
+                      <li key={choice.id}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={choice.id === String(activeSelectedItemId)}
+                          disabled={choice.locked}
+                          onClick={() => {
+                            handleOfficeDropdownChange({ target: { value: choice.id } });
+                            setOfficeMenuOpen(false);
+                          }}
+                        >
+                          {choice.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             <div className="file-upload-drag-area-aligned">
@@ -219,14 +252,14 @@ function ClearanceRequest({
                 id="clearance-file-input"
                 className="hidden-file-input-completely"
                 onChange={handleFileChange}
-                accept=".pdf,.png,.jpg,.jpeg"
+                accept="image/*"
               />
               <label htmlFor="clearance-file-input" className="file-upload-label-wrapper-aligned">
                 <span className="upload-cloud-icon-aligned">📤</span>
                 <span className="upload-main-text-aligned">
-                  {fileAttachment ? fileAttachment.name : "Drag and drop your document file here"}
+                  {fileAttachment ? fileAttachment.name : "Drag and drop your image here"}
                 </span>
-                <span className="upload-sub-text-aligned">Supports PDF, PNG, or JPG up to 5MB</span>
+                <span className="upload-sub-text-aligned">Supports image files up to 5MB</span>
               </label>
             </div>
 

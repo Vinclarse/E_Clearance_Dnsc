@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
 import {
   apiErrorMessage,
@@ -87,7 +87,7 @@ export default function AuditLogs() {
 
   useEffect(() => {
     let cancelled = false;
-    const filters = auditFilters({ action, query, actorType, range });
+    const filters = auditFilters({ query, actorType, range });
     fetchAuditReport(filters)
       .then((report) => {
         if (cancelled) return;
@@ -100,7 +100,7 @@ export default function AuditLogs() {
     return () => {
       cancelled = true;
     };
-  }, [action, query, actorType, range]);
+  }, [query, actorType, range]);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,6 +161,10 @@ export default function AuditLogs() {
     }
   }
 
+  const pageButtons = useMemo(() => {
+    const shown = new Set([1, page - 1, page, page + 1, pages].filter((value) => value >= 1 && value <= pages));
+    return [...shown].sort((left, right) => left - right);
+  }, [page, pages]);
   const selected = rows.find((row) => row.id === selectedId) || null;
   const styleFor = (value) => ACTION_STYLE[value] || ACTION_STYLE.update;
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -172,6 +176,7 @@ export default function AuditLogs() {
   if (loading && rows.length === 0 && !error) {
     return (
       <PortalLoading
+        variant="table"
         title="Loading audit logs"
         detail="Getting the latest recorded account and clearance changes."
       />
@@ -306,7 +311,14 @@ export default function AuditLogs() {
               <button type="button" className="al2-page-btn" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}>
                 <ChevronLeft size={14} />
               </button>
-              <button type="button" className="al2-page-btn active">{page}</button>
+              {pageButtons.map((value, index) => (
+                <span key={value} style={{ display: "contents" }}>
+                  {index > 0 && value - pageButtons[index - 1] > 1 && <span className="al2-ellipsis">...</span>}
+                  <button type="button" className={"al2-page-btn" + (value === page ? " active" : "")} onClick={() => setPage(value)}>
+                    {value}
+                  </button>
+                </span>
+              ))}
               <button type="button" className="al2-page-btn" onClick={() => setPage((value) => Math.min(pages, value + 1))} disabled={page === pages}>
                 <ChevronRight size={14} />
               </button>

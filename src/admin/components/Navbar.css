@@ -25,17 +25,23 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  height: 54px;
+  box-sizing: border-box;
   background: #fff;
   border-radius: 999px;
-  padding: 8px 16px 8px 8px;
+  padding: 6px 16px 6px 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.07);
   min-width: 220px;
 }
 
 .nb-logo {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: transparent;
   display: flex;
   align-items: center;
@@ -76,6 +82,8 @@
   background: var(--bg-navbar);       /* #2d3a1e */
   border-radius: 999px;
   padding: 6px 8px;
+  height: 54px;
+  box-sizing: border-box;
   box-shadow: 0 4px 20px rgba(0,0,0,0.18);
   flex: 1;                            /* takes remaining center space */
   justify-content: center;
@@ -89,11 +97,22 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  width: 100%;
+}
+
+.nb-nav > li {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
 }
 
 .nb-link {
-  display: block;
-  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 8px 12px;
   border-radius: 999px;
   color: rgba(255,255,255,0.65);
   font-size: 13px;
@@ -103,6 +122,7 @@
   transition: background 0.15s, color 0.15s;
   cursor: pointer;
   letter-spacing: 0.01em;
+  text-align: center;
 }
 
 /* Hover effect */
@@ -124,8 +144,8 @@
 
 /* ══ SECTION 3: Bell — standalone circle ══ */
 .nb-bell {
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.09);
@@ -169,6 +189,8 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  height: 54px;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.09);
   border-radius: 999px;
@@ -187,8 +209,8 @@
 
 /* Avatar circle */
 .nb-avatar {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #fff;
   overflow: hidden;
@@ -435,6 +457,10 @@
     gap: 4px;
   }
 
+  .nb-nav > li {
+    flex: none;
+  }
+
   .nb-link {
     white-space: normal;
   }
@@ -550,6 +576,10 @@
     background: none;
     border: 0;
     padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
   .portal-mobile-brand img,

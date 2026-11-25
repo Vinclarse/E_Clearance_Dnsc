@@ -9,6 +9,8 @@ import ClearanceRequest from "../components/ClearanceRequest";
 import ClearanceTracker from "../components/ClearanceTracker";
 import DownloadClearance from "../components/DownloadClearance";
 import apiClient from "../services/api";
+import PortalLoading from "../components/PortalLoading.jsx";
+import { subscribeAccount, subscribePortalRefresh } from "../services/portalRefresh.js";
 import "../styles/theme.css";
 import "../styles/dashboard.css";
 
@@ -17,6 +19,37 @@ const responsePayload = (data) => (
     ? data.data
     : data
 );
+
+const textValue = (value) => (typeof value === "string" && value.trim() ? value.trim() : "");
+
+async function withClearanceTerm(clearance) {
+  const nested = clearance?.clearance_type && typeof clearance.clearance_type === "object"
+    ? clearance.clearance_type
+    : {};
+  let semester = textValue(clearance?.semester) || textValue(nested.semester);
+  let academicYear = textValue(clearance?.academic_year) || textValue(nested.academic_year);
+  let typeName = textValue(clearance?.clearance_type_name) || textValue(nested.name) || textValue(nested.clearance_type_name);
+  const typeId = clearance?.clearance_type_id || nested.id;
+
+  if ((!semester || !academicYear || !typeName) && typeId) {
+    try {
+      const response = await apiClient.get(`clearance-types/${typeId}/`);
+      const type = responsePayload(response.data);
+      semester = semester || textValue(type?.semester);
+      academicYear = academicYear || textValue(type?.academic_year);
+      typeName = typeName || textValue(type?.name);
+    } catch (error) {
+      console.error("Failed to load the clearance term:", error);
+    }
+  }
+
+  return {
+    ...clearance,
+    semester,
+    academic_year: academicYear,
+    clearance_type_name: typeName,
+  };
+}
 
 const extractCollection = (data) => {
   const payload = responsePayload(data);
@@ -172,7 +205,21 @@ function StudentDashboard() {
       .catch((err) => console.error("Failed to load the current user profile:", err));
 
     return () => window.removeEventListener("resize", handleResize);
+  }, [isDesignPreview, reloadKey]);
+
+  useEffect(() => {
+    if (isDesignPreview) return undefined;
+    return subscribePortalRefresh(() => {
+      setLoadingClearance(true);
+      setReloadKey((key) => key + 1);
+    });
   }, [isDesignPreview]);
+
+  useEffect(() => subscribeAccount((account) => {
+    if (!account) return;
+    setProfile(account);
+    setAvatarPreview(account.profile_url ?? account.profile ?? null);
+  }), []);
 
   useEffect(() => {
     if (isDesignPreview) return undefined;
@@ -193,11 +240,12 @@ function StudentDashboard() {
         const extractedItems = embeddedItems.length > 0
           ? embeddedItems
           : await fetchClearanceItems(clearance.id);
+        const termed = await withClearanceTerm(clearance);
         if (!isMounted) return;
         setClearanceRecord({
-          ...clearance,
-          status: clearance.status ?? clearance.overall_status,
-          overall_status: clearance.overall_status ?? clearance.status,
+          ...termed,
+          status: termed.status ?? termed.overall_status,
+          overall_status: termed.overall_status ?? termed.status,
         });
         setRequirements(
           extractedItems
@@ -279,11 +327,12 @@ function StudentDashboard() {
     setReloadKey((key) => key + 1);
   };
 
+  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ")
+    || profile?.name
+    || "Student";
   const initials = profile?.first_name && profile?.last_name
     ? `${profile.first_name.charAt(0).toUpperCase()}${profile.last_name.charAt(0).toUpperCase()}`
-    : profile?.name 
-      ? profile.name.charAt(0).toUpperCase()
-      : "A";
+    : displayName.charAt(0).toUpperCase() || "S";
 
   const overallStatus = calculateOverallStatus();
 
@@ -295,6 +344,9 @@ function StudentDashboard() {
           setActiveTab={setCurrentTab} 
           avatarUrl={avatarPreview} 
           userInitials={initials}
+          displayName={displayName}
+          email={profile?.email || ""}
+          roleName="Student"
           requirements={requirements}
           injectedAlert={customNotification}
           clearInjectedAlert={() => setCustomNotification(null)}
@@ -305,6 +357,9 @@ function StudentDashboard() {
           setActiveTab={setCurrentTab} 
           avatarUrl={avatarPreview} 
           userInitials={initials}
+          displayName={displayName}
+          email={profile?.email || ""}
+          roleName="Student"
           requirements={requirements}
           injectedAlert={customNotification}
           clearInjectedAlert={() => setCustomNotification(null)}
@@ -318,11 +373,7 @@ function StudentDashboard() {
           </div>
         )}
         {loadingClearance && currentTab !== "profile" ? (
-          <div className="dashboard-state" role="status">
-            <span className="loading-spinner" aria-hidden="true" />
-            <strong>Loading your clearance</strong>
-            <span>Getting your latest requirements and progress.</span>
-          </div>
+          <PortalLoading variant="student" title="Loading your clearance" detail="Getting your latest requirements and progress." />
         ) : clearanceError && currentTab !== "profile" ? (
           <div className="dashboard-state dashboard-error-state" role="alert">
             <span className="dashboard-state-icon" aria-hidden="true">!</span>

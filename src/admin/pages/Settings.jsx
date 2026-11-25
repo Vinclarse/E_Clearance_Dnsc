@@ -24,6 +24,20 @@ function titleFor(key) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+const SECTION_LABELS = {
+  general: "General",
+  "system_settings.change_maintenance": "Officer maintenance",
+  "system_settings.change_student_maintenance": "Student maintenance",
+  "system_settings.change_term_settings": "Term",
+  "system_settings.change_feature_settings": "Feature settings",
+  features: "Modules",
+};
+
+function sectionLabel(bucket) {
+  if (SECTION_LABELS[bucket]) return SECTION_LABELS[bucket];
+  return titleFor(String(bucket || "general").replace(/\./g, " "));
+}
+
 export default function Settings() {
   const [settings, setSettings] = useState([]);
   const [features, setFeatures] = useState([]);
@@ -41,7 +55,8 @@ export default function Settings() {
         if (!active) return;
         setSettings(rows);
         setFeatures(featureRows);
-        setActiveTab(rows[0]?.bucket || (featureRows.length ? "features" : ""));
+        const firstBucket = rows[0] ? (rows[0].bucket || "general") : "";
+        setActiveTab(firstBucket || (featureRows.length ? "features" : ""));
       })
       .catch((loadError) => {
         if (active) setError(apiErrorMessage(loadError, "Could not load system settings."));
@@ -105,6 +120,7 @@ export default function Settings() {
   if (loading) {
     return (
       <PortalLoading
+        variant="settings"
         title="Loading settings"
         detail="Getting the institute settings and the features this account can change."
       />
@@ -134,7 +150,7 @@ export default function Settings() {
                 className={"settings-nav-item" + (activeTab === bucket ? " active" : "")}
                 onClick={() => setActiveTab(bucket)}
               >
-                <span>{titleFor(bucket)}</span>
+                <span>{sectionLabel(bucket)}</span>
               </button>
             ))}
           </nav>
@@ -173,7 +189,7 @@ export default function Settings() {
               </div>
             ) : (
               <div className="settings-section">
-                <h2 className="settings-section-title">{titleFor(activeTab)}</h2>
+                <h2 className="settings-section-title">{sectionLabel(activeTab)}</h2>
                 <div className="settings-toggle-list">
                   {visibleSettings.map((row) => {
                     const current = valueFor(row);
@@ -215,18 +231,18 @@ export default function Settings() {
               </div>
             )}
 
-            <div className="settings-actions">
-              {message && <span className="settings-saved-msg">{message}</span>}
-              <button type="button" className="settings-save-btn" onClick={handleSave} disabled={saving}>
-                <Save size={14} /> {saving ? "Saving…" : "Save changes"}
-              </button>
-            </div>
-
             <div className="settings-system-grid">
               <div className="settings-system-row">
                 <span className="settings-system-label">API</span>
                 <span className="settings-system-value">{apiClient.defaults.baseURL}</span>
               </div>
+            </div>
+
+            <div className="settings-actions">
+              {message && <span className="settings-saved-msg">{message}</span>}
+              <button type="button" className="settings-save-btn" onClick={handleSave} disabled={saving}>
+                <Save size={14} /> {saving ? "Saving…" : "Save changes"}
+              </button>
             </div>
           </div>
         </div>

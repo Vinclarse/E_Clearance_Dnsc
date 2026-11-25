@@ -4,6 +4,7 @@ import SIG1 from './SIG1.jsx'
 import SIG2 from './SIG2.jsx'
 import SIG3 from './SIG3.jsx'
 import SIG5 from './SIG-5.jsx'
+import ProfileSection from '../components/ProfileSection.jsx'
 import { fetchCurrentUser } from '../services/account.js'
 import { signOut } from '../services/auth.js'
 import {
@@ -14,6 +15,8 @@ import {
   markNotificationRead,
   profileFromAccount,
 } from './signatoryApi.js'
+import PortalLoading from '../components/PortalLoading.jsx'
+import { subscribeAccount, subscribePortalRefresh } from '../services/portalRefresh.js'
 import './signatory-responsive.css'
 
 const emptyProfile = {
@@ -33,6 +36,7 @@ export default function SignatoryApp() {
   const [metrics, setMetrics] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     let isCurrent = true
@@ -60,7 +64,16 @@ export default function SignatoryApp() {
     return () => {
       isCurrent = false
     }
-  }, [])
+  }, [refreshKey])
+
+  useEffect(() => subscribePortalRefresh(() => {
+    setLoading(true)
+    setRefreshKey((key) => key + 1)
+  }), [])
+
+  useEffect(() => subscribeAccount((account) => {
+    if (account) setProfile(profileFromAccount(account))
+  }), [])
 
   const addNotification = ({ title, desc }) => {
     setNotifications((current) => [
@@ -93,11 +106,22 @@ export default function SignatoryApp() {
   }
 
   const updateStudent = async (id, updates) => {
-    const student = students.find((item) => item.id === id)
+    const student = students.find((item) => item.id === id) || cohort.find((item) => item.id === id)
     if (!student) return
+
+    const applyLocal = (row) => {
+      if (String(row.id) !== String(id)) return row
+      return {
+        ...row,
+        status: updates.status || row.status,
+        validated: updates.validated === true ? true : row.validated,
+      }
+    }
 
     try {
       await applySignatoryUpdate(student, updates)
+      setStudents((rows) => rows.map(applyLocal))
+      setCohort((rows) => rows.map(applyLocal))
     } catch (error) {
       const message = error?.response?.data?.errors?.detail
         || error?.response?.data?.message
@@ -110,19 +134,27 @@ export default function SignatoryApp() {
       return
     }
 
+    try {
+      const records = await fetchSignatoryRecords()
+      setStudents(records.queue || [])
+      setCohort(records.cohort || [])
+      setMetrics(records.metrics || null)
+    } catch (error) {
+      const message = error?.response?.data?.errors?.detail
+        || error?.response?.data?.message
+        || error.message
+        || 'The updated list could not be refreshed.'
+      addNotification({
+        title: 'Saved, but the list could not be refreshed',
+        desc: message === 'Error' ? 'The updated list could not be refreshed.' : message,
+      })
+    }
+
     let title = 'Clearance Record Updated'
     let desc = `${student.name}'s clearance record was updated.`
-    if (updates.proofStatus === 'resolved') {
-      title = 'Settlement Proof Approved'
-      desc = `Settlement proof for ${student.name} was approved.`
-    } else if (updates.proofStatus === 'submitted') {
-      title = 'Settlement Proof Submitted'
-      desc = `Settlement proof for ${student.name} was submitted for review.`
-    } else if (updates.validated !== undefined) {
-      title = updates.validated ? 'Enrollment Validated' : 'Enrollment Validation Removed'
-      desc = updates.validated
-        ? `${student.name}'s enrollment was validated.`
-        : `${student.name}'s enrollment validation was removed.`
+    if (updates.validated === true) {
+      title = 'Enrollment Validated'
+      desc = `${student.name}'s enrollment was validated.`
     } else if (updates.status === 'Cleared') {
       title = 'Clearance Approved'
       desc = `${student.name}'s clearance was approved.`
@@ -132,24 +164,6 @@ export default function SignatoryApp() {
     }
 
     addNotification({ title, desc })
-    setStudents((current) => current.map((student) => {
-      if (student.id !== id) return student
-
-      const updatedStudent = { ...student, ...updates }
-      if (updates.status === 'Cleared') {
-        updatedStudent.steps = student.steps.map((cleared, index) => cleared || index === 3)
-        if (student.proofStatus === 'submitted') updatedStudent.proofStatus = 'resolved'
-        if (student.fee !== '—') updatedStudent.resolvedAmount = student.fee
-        updatedStudent.fee = '—'
-        updatedStudent.proofDetails = ''
-        updatedStudent.note = ''
-      } else if (updates.status === 'Deficiency' && updates.proofStatus === undefined) {
-        updatedStudent.proof = false
-        updatedStudent.proofStatus = 'pending'
-      }
-
-      return updatedStudent
-    }))
   }
 
   let page
@@ -162,6 +176,13 @@ export default function SignatoryApp() {
       break
     case 'SIG5':
       page = <SIG5 students={cohort} onUpdateStudent={updateStudent} />
+      break
+    case 'profile':
+      page = (
+        <ProfileSection
+          onAvatarUpdated={(url) => setProfile((current) => ({ ...current, avatarUrl: url }))}
+        />
+      )
       break
     case 'SIG1':
     default:
@@ -185,13 +206,10 @@ export default function SignatoryApp() {
       onMarkNotificationRead={markNotificationAsRead}
       onMarkAllNotificationsRead={markAllNotificationsAsRead}
       onSignOut={signOut}
+      onOpenProfile={() => setActivePage('profile')}
     >
-      {loading ? (
-        <div className="portal-loading" role="status">
-          <span className="portal-loading-spinner" aria-hidden="true" />
-          <strong>Loading the signatory portal</strong>
-          <span>Getting your queue and notifications.</span>
-        </div>
+      {loading && activePage !== 'profile' ? (
+        <PortalLoading variant="signatory" title="Loading the signatory portal" detail="Getting your queue and notifications." />
       ) : (
         <>
           {loadError && <p className="portal-loading-error" role="alert">{loadError}</p>}
