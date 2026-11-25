@@ -37,14 +37,26 @@ function programMatches(program, studentProgram) {
   return (program.ids || [program.id]).some((id) => String(id) === String(studentProgram));
 }
 
+const YEAR_OPTIONS = [
+  { value: "1", label: "1st Year" },
+  { value: "2", label: "2nd Year" },
+  { value: "3", label: "3rd Year" },
+  { value: "4", label: "4th Year" },
+];
+
+function matchesYear(student, year) {
+  return !year || String(student.s_lvl) === String(year);
+}
+
 async function fetchStudentsForPrograms(programIds, params) {
-  if (programIds.length <= 1) {
+  if (!params.s_lvl && programIds.length <= 1) {
     return fetchStudents({ ...params, program: programIds[0] || undefined });
   }
 
   const collected = [];
   const seen = new Set();
-  for (const program of programIds) {
+  const sources = programIds.length ? programIds : [undefined];
+  for (const program of sources) {
     for (let current = 1; current <= 20; current += 1) {
       const result = await fetchStudents({
         ...params,
@@ -53,6 +65,7 @@ async function fetchStudentsForPrograms(programIds, params) {
         per_page: 100,
       });
       for (const student of result.items) {
+        if (!matchesYear(student, params.s_lvl)) continue;
         const key = student.id ?? student.s_studentID;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -76,6 +89,7 @@ export default function StudentDirectory() {
   const [query, setQuery] = useState("");
   const [programId, setProgramId] = useState("");
   const [section, setSection] = useState("");
+  const [year, setYear] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [programs, setPrograms] = useState([]);
@@ -135,6 +149,7 @@ export default function StudentDirectory() {
       per_page: PAGE_SIZE,
       search: query || undefined,
       s_set: section || undefined,
+      s_lvl: year || undefined,
       s_status: status || undefined,
     })
       .then((result) => {
@@ -155,7 +170,7 @@ export default function StudentDirectory() {
     return () => {
       cancelled = true;
     };
-  }, [page, query, programId, section, status]);
+  }, [page, query, programId, section, year, status]);
 
   const pageButtons = useMemo(() => {
     const shown = new Set([1, page - 1, page, page + 1, pages].filter((value) => value >= 1 && value <= pages));
@@ -257,7 +272,12 @@ export default function StudentDirectory() {
       )}
 
       <div className="sd2-stat-row">
-        <div className="sd2-stat-card dark">
+        <button
+          type="button"
+          className={"sd2-stat-card dark sd2-year-card" + (year === "" ? " active" : "")}
+          aria-pressed={year === ""}
+          onClick={() => { setYear(""); setPage(1); }}
+        >
           <div className="sd2-stat-dark-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -270,15 +290,24 @@ export default function StudentDirectory() {
             <div className="sd2-stat-num-lg">{totalStudents.toLocaleString()}</div>
             <div className="sd2-stat-label-sm">All Students</div>
           </div>
-        </div>
-        {yearStats.map((year) => (
-          <div key={year.yr} className="sd2-stat-card light">
-            <div className="sd2-stat-yr-num">{year.yr}</div>
+        </button>
+        {yearStats.map((item) => (
+          <button
+            key={item.yr}
+            type="button"
+            className={"sd2-stat-card light sd2-year-card" + (year === String(item.yr) ? " active" : "")}
+            aria-pressed={year === String(item.yr)}
+            onClick={() => {
+              setYear((current) => (current === String(item.yr) ? "" : String(item.yr)));
+              setPage(1);
+            }}
+          >
+            <div className="sd2-stat-yr-num">{item.yr}</div>
             <div className="sd2-stat-yr-info">
-              <div className="sd2-stat-num">{year.count}</div>
-              <div className="sd2-stat-yr-label">{year.label} · {year.pct}</div>
+              <div className="sd2-stat-num">{item.count}</div>
+              <div className="sd2-stat-yr-label">{item.label} · {item.pct}</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -302,6 +331,12 @@ export default function StudentDirectory() {
               <option key={programOptionValue(program)} value={programOptionValue(program)}>{program.acronym}</option>
             ))}
           </select>
+          <select className="sd2-select" aria-label="Year" value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}>
+            <option value="">All years</option>
+            {YEAR_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
           <select className="sd2-select" value={section} onChange={(event) => { setSection(event.target.value); setPage(1); }}>
             <option value="">All Sections</option>
             {sections.map((value) => (
@@ -309,7 +344,7 @@ export default function StudentDirectory() {
             ))}
           </select>
           <select className="sd2-select" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
-            <option value="">All Statuses</option>
+            <option value="">All status</option>
             <option value="enrolled">Enrolled</option>
             <option value="graduated">Graduated</option>
             <option value="dropped">Dropped</option>

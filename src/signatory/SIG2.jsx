@@ -14,6 +14,7 @@ function QueueIcon({ children, label }) {
 export default function SIG2({ students, onUpdateStudent }) {
   const [search, setSearch] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
+  const [selectedYear, setSelectedYear] = useState('All years');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [inspectingStudent, setInspectingStudent] = useState(null);
@@ -54,8 +55,9 @@ export default function SIG2({ students, onUpdateStudent }) {
   const filteredStudents = students.filter(s => {
     const matchesSearch = String(s.name || "").toLowerCase().includes(search.toLowerCase()) || String(s.id).includes(search);
     const matchesProgram = selectedProgram === 'All Programs' || String(s.program || "").includes(selectedProgram);
+    const matchesYear = selectedYear === 'All years' || String(s.yearLevel) === selectedYear;
     const matchesStatus = selectedStatus === 'All' || s.status === selectedStatus;
-    return matchesSearch && matchesProgram && matchesStatus;
+    return matchesSearch && matchesProgram && matchesYear && matchesStatus;
   });
   const pageCount = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
   const activePage = Math.min(currentPage, pageCount);
@@ -97,10 +99,27 @@ export default function SIG2({ students, onUpdateStudent }) {
 
           </select>
 
+          <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#74806E', letterSpacing: '0.05em' }}>YEAR</label>
+          <select
+            aria-label="Filter by year"
+            value={selectedYear}
+            onChange={(e) => {
+              setSelectedYear(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', margin: '0.4rem 0 1rem 0', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+          >
+            <option>All years</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+          </select>
+
           <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#74806E', letterSpacing: '0.05em' }}>STATUS</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.4rem' }}>
             {[
-              { id: 'All', label: 'All', count: students.length },
+              { id: 'All', label: 'All status', count: students.length },
               { id: 'Pending', label: 'Pending', count: students.filter((student) => student.status === 'Pending').length },
               { id: 'Under Review', label: 'Under Review', count: students.filter((student) => student.status === 'Under Review').length },
               { id: 'Deficiency', label: 'Deficiency', count: students.filter((student) => student.status === 'Deficiency').length },

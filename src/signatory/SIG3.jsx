@@ -7,6 +7,7 @@ export default function SIG3({ students, onUpdateStudent }) {
   const [inspectingStudent, setInspectingStudent] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
+  const [selectedYear, setSelectedYear] = useState('All years');
   const [expandedColumns, setExpandedColumns] = useState({});
   const searchTerm = search.trim().toLowerCase();
   const filteredStudents = students.filter((student) => {
@@ -16,7 +17,8 @@ export default function SIG3({ students, onUpdateStudent }) {
       || String(student.id || "").toLowerCase().includes(searchTerm);
     const matchesProgram = selectedProgram === 'All Programs'
       || student.program === selectedProgram;
-    return matchesSearch && matchesProgram;
+    const matchesYear = selectedYear === 'All years' || String(student.yearLevel) === selectedYear;
+    return matchesSearch && matchesProgram && matchesYear;
   });
   const awaitingList = filteredStudents.filter(
     (student) => student.status === 'Deficiency' && student.proofStatus !== 'submitted' && student.proofStatus !== 'resolved',
@@ -66,6 +68,18 @@ export default function SIG3({ students, onUpdateStudent }) {
             <option>All Programs</option>
             <option>BSIT</option>
             <option>BSIS</option>
+          </select>
+          <select
+            aria-label="Filter by year"
+            value={selectedYear}
+            onChange={(event) => setSelectedYear(event.target.value)}
+            style={{ width: '120px', maxWidth: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+          >
+            <option>All years</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
           </select>
         </div>
       </div>
