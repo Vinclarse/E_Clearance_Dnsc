@@ -159,6 +159,7 @@ export default function SignatoryRoles() {
   if (loading) {
     return (
       <PortalLoading
+        variant="roles"
         title="Loading signatory roles"
         detail="Getting the approval chain and the staff assigned to each step."
       />
@@ -273,7 +274,7 @@ export default function SignatoryRoles() {
                 />
               </div>
               <select className="sr2-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="">All Statuses</option>
+                <option value="">All status</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>

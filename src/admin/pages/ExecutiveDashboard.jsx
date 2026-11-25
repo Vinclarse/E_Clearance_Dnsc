@@ -9,6 +9,7 @@ import {
   pickClearanceType,
   presentTerm,
 } from "../services/dashboardApi.js";
+import PortalLoading from "../../components/PortalLoading.jsx";
 import "./ExecutiveDashboard.css";
 
 const STATUS_COLORS = {
@@ -63,13 +64,36 @@ function DonutChart({ segments }) {
   );
 }
 
-function buildView(summary, backlog) {
+function statusCounts(summary, dashboard) {
+  const stats = dashboard?.stats;
+  if (stats) {
+    const completed = Number(stats.completed_count ?? 0);
+    const pending = Number(stats.pending_count ?? 0);
+    const inProgress = Number(stats.in_progress_count ?? 0);
+    const rejected = Number(stats.rejected_count ?? 0);
+    const issued = Number(stats.issued_students_count ?? 0);
+    const statusTotal = completed + pending + inProgress + rejected;
+    return {
+      total: statusTotal || issued,
+      completed,
+      pending,
+      inProgress,
+      rejected,
+    };
+  }
+
   const counts = summary?.student_clearances ?? {};
-  const total = Number(counts.total ?? 0);
-  const completed = Number(counts.completed ?? 0);
-  const pending = Number(counts.pending ?? 0);
-  const inProgress = Number(counts.in_progress ?? 0);
-  const rejected = Number(counts.rejected ?? 0);
+  return {
+    total: Number(counts.total ?? 0),
+    completed: Number(counts.completed ?? 0),
+    pending: Number(counts.pending ?? 0),
+    inProgress: Number(counts.in_progress ?? 0),
+    rejected: Number(counts.rejected ?? 0),
+  };
+}
+
+function buildView(summary, backlog, dashboard) {
+  const { total, completed, pending, inProgress, rejected } = statusCounts(summary, dashboard);
   const distribution = [
     { label: "Completed", count: completed, color: STATUS_COLORS.completed },
     { label: "Pending", count: pending, color: STATUS_COLORS.pending },
@@ -152,7 +176,7 @@ export default function ExecutiveDashboard() {
 
         if (cancelled) return;
         setTerm(presentTerm(selected, dashboard));
-        setView(buildView(summary, backlog));
+        setView(buildView(summary, backlog, dashboard));
         setStatus("ready");
       } catch (loadError) {
         if (cancelled) return;
@@ -172,13 +196,7 @@ export default function ExecutiveDashboard() {
   const maxBottleneck = Math.max(1, ...bottlenecks.map((row) => row.total));
 
   if (status === "loading") {
-    return (
-      <div className="portal-loading" role="status">
-        <span className="portal-loading-spinner" aria-hidden="true" />
-        <strong>Loading the admin dashboard</strong>
-        <span>Getting clearance totals for this term.</span>
-      </div>
-    );
+    return <PortalLoading variant="admin" title="Loading the admin dashboard" detail="Getting clearance totals for this term." />;
   }
 
   return (

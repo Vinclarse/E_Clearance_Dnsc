@@ -345,6 +345,8 @@
   font-weight: 600;
   color: var(--text-primary);
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ── Danger zone ── */
@@ -396,16 +398,52 @@
 }
 
 @media (max-width: 768px) {
+  .settings-page {
+    padding: 8px 0 24px;
+  }
+
   .settings-layout {
     grid-template-columns: 1fr;
   }
+
   .settings-nav {
-    flex-direction: row;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    overflow: visible;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
+
   .settings-nav-item {
-    border-bottom: none;
-    border-right: 1px solid var(--border-color);
-    white-space: nowrap;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-card);
+    text-align: center;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .settings-nav-item:last-child {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .settings-nav-item.active {
+    border-color: var(--bg-navbar);
+  }
+
+  .settings-panel {
+    padding: 18px;
+  }
+
+  .settings-system-row,
+  .settings-toggle-row,
+  .settings-actions {
+    flex-wrap: wrap;
   }
 }

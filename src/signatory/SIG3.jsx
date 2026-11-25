@@ -1,18 +1,24 @@
 import { useState } from 'react';
+import ProofPreview from './ProofPreview.jsx';
+import { termFromRecords } from '../services/clearanceDisplay.js';
 
 export default function SIG3({ students, onUpdateStudent }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [inspectingStudent, setInspectingStudent] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
+  const [selectedYear, setSelectedYear] = useState('All years');
   const [expandedColumns, setExpandedColumns] = useState({});
   const searchTerm = search.trim().toLowerCase();
   const filteredStudents = students.filter((student) => {
     const matchesSearch = !searchTerm
-      || student.name.toLowerCase().includes(searchTerm)
-      || student.id.toLowerCase().includes(searchTerm);
+      || String(student.name || "").toLowerCase().includes(searchTerm)
+      || String(student.studentNumber || "").toLowerCase().includes(searchTerm)
+      || String(student.id || "").toLowerCase().includes(searchTerm);
     const matchesProgram = selectedProgram === 'All Programs'
       || student.program === selectedProgram;
-    return matchesSearch && matchesProgram;
+    const matchesYear = selectedYear === 'All years' || String(student.yearLevel) === selectedYear;
+    return matchesSearch && matchesProgram && matchesYear;
   });
   const awaitingList = filteredStudents.filter(
     (student) => student.status === 'Deficiency' && student.proofStatus !== 'submitted' && student.proofStatus !== 'resolved',
@@ -24,21 +30,10 @@ export default function SIG3({ students, onUpdateStudent }) {
     setExpandedColumns((current) => ({ ...current, [column]: !current[column] }));
   };
 
-  const handleApproveProof = (item) => {
-    onUpdateStudent(item.id, {
-      status: 'Cleared',
-      proofStatus: 'resolved',
-      proof: true,
-    });
-  };
-
-  const handleSubmitProof = (item) => {
-    onUpdateStudent(item.id, {
-      status: 'Under Review',
-      proofStatus: 'submitted',
-      proof: true,
-      note: 'Proof submitted for review',
-    });
+  const approveInspected = () => {
+    if (!inspectingStudent || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false) return;
+    onUpdateStudent(inspectingStudent.id, { status: 'Cleared' });
+    setInspectingStudent(null);
   };
 
   return (
@@ -48,7 +43,7 @@ export default function SIG3({ students, onUpdateStudent }) {
       <div className="signatory-deficiencies-header" style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '0.85rem 1.2rem', display: 'grid', alignItems: 'center', gap: '1rem' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#29352A' }}>Deficiencies & Proofs</h2>
-          <span style={{ fontSize: '0.78rem', color: '#74806E' }}>Items needing settlement review • 1st Sem, AY 2026-2027</span>
+          <span style={{ fontSize: '0.78rem', color: '#74806E' }}>Items needing settlement review{termFromRecords(students) ? ` • ${termFromRecords(students)}` : ""}</span>
         </div>
         <div className="signatory-metrics-grid" style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem' }}>
           <HeaderPill count={awaitingList.length} label="Active Deficiencies" accent="#AA5757" />
@@ -73,6 +68,18 @@ export default function SIG3({ students, onUpdateStudent }) {
             <option>All Programs</option>
             <option>BSIT</option>
             <option>BSIS</option>
+          </select>
+          <select
+            aria-label="Filter by year"
+            value={selectedYear}
+            onChange={(event) => setSelectedYear(event.target.value)}
+            style={{ width: '120px', maxWidth: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+          >
+            <option>All years</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
           </select>
         </div>
       </div>
@@ -99,7 +106,7 @@ export default function SIG3({ students, onUpdateStudent }) {
                   <Avatar name={item.name} color="#91A778" />
                   <div>
                     <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.id} · {item.program}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.studentNumber || '—'} · {item.program || '—'}</div>
                   </div>
                 </div>
                 <span style={{ backgroundColor: '#FAE8E5', color: '#AA5757', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', fontWeight: 'bold', height: 'fit-content' }}>deficiency</span>
@@ -115,13 +122,6 @@ export default function SIG3({ students, onUpdateStudent }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.68rem', color: '#74806E' }}>Awaiting student proof</span>
-                <button
-                  type="button"
-                  onClick={() => handleSubmitProof(item)}
-                  style={{ backgroundColor: '#2E3D28', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  Simulate Proof Submission
-                </button>
               </div>
             </div>
           ))}
@@ -146,7 +146,7 @@ export default function SIG3({ students, onUpdateStudent }) {
                   <Avatar name={item.name} color="#91A778" />
                   <div>
                     <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.id} · {item.program}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.studentNumber || '—'} · {item.program || '—'}</div>
                   </div>
                 </div>
                 <span style={{ backgroundColor: '#E2F1F7', color: '#3E7E9C', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', fontWeight: 'bold', height: 'fit-content' }}>Under Review</span>
@@ -163,7 +163,8 @@ export default function SIG3({ students, onUpdateStudent }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.68rem', color: '#74806E' }}>Proof submitted for review</span>
                 <button
-                  onClick={() => handleApproveProof(item)}
+                  type="button"
+                  onClick={() => setInspectingStudent(item)}
                   style={{ backgroundColor: '#2E3D28', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   Inspect Proof
@@ -192,7 +193,7 @@ export default function SIG3({ students, onUpdateStudent }) {
                   <Avatar name={item.name} color="#91A778" />
                   <div>
                     <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.id} · {item.program}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#74806E' }}>{item.studentNumber || '—'} · {item.program || '—'}</div>
                   </div>
                 </div>
                 <span style={{ backgroundColor: item.status === 'Cleared' ? '#E5F3E8' : '#FAE8E5', color: item.status === 'Cleared' ? '#458469' : '#AA5757', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.68rem', fontWeight: 'bold', height: 'fit-content' }}>
@@ -223,6 +224,13 @@ export default function SIG3({ students, onUpdateStudent }) {
         </KanbanCol>
 
       </div>
+
+      <ProofPreview
+        student={inspectingStudent}
+        onClose={() => setInspectingStudent(null)}
+        onApprove={approveInspected}
+        approveDisabled={!inspectingStudent || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false}
+      />
 
       {selectedRecord && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>

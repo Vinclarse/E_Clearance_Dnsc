@@ -3,12 +3,13 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import PortalLoading from './components/PortalLoading.jsx'
 import apiClient from './services/api.js'
-import { accountKindFor, fetchCurrentUser, homePathForAccount } from './services/account.js'
+import { accountKindFor, fetchCurrentUser, homePathForAccount, isSuperuserAccount } from './services/account.js'
 import {
   completePasswordReset,
   requestPasswordReset,
   verifyPasswordReset,
 } from './services/passwordReset.js'
+import eclearanceLogo from './assets/eclearance-logo.png'
 import arrowRight from './assets/arrow-right.svg'
 import dashboardIllustration from './assets/clearance-dashboard-illustration.svg'
 import eyeIcon from './assets/eye.png'
@@ -168,6 +169,9 @@ function getLoginErrorMessage(error) {
 async function openAccountHome() {
   try {
     const profile = await fetchCurrentUser()
+    if (isSuperuserAccount(profile)) {
+      throw new Error('Superadmin does not open the admin portal. Sign in with a school admin, institute admin, clearance admin, or institute staff account.')
+    }
     window.location.assign(homePathForAccount(profile))
   } catch (error) {
     localStorage.removeItem('auth_token')
@@ -256,7 +260,9 @@ function ForgotPasswordPage() {
     <main className="reset-page">
       <section className="reset-intro" aria-labelledby="reset-intro-title">
         <a className="reset-brand" href="/" aria-label="E-Clearance System home">
-          <span className="reset-brand-mark" aria-hidden="true" />
+          <span className="reset-brand-mark" aria-hidden="true">
+            <img src={eclearanceLogo} alt="" />
+          </span>
           <span className="reset-brand-text">
             <strong>E-Clearance System</strong>
             <small>Davao del Norte State College</small>
@@ -524,7 +530,9 @@ function LoginPage() {
     <main className="login-page">
       <section className="login-intro" aria-labelledby="login-intro-title">
         <a className="login-brand" href="/" aria-label="ClearanceDNSC home">
-          <span className="login-brand-mark" aria-hidden="true" />
+          <span className="login-brand-mark" aria-hidden="true">
+            <img src={eclearanceLogo} alt="" />
+          </span>
           <span>ClearanceDNSC</span>
         </a>
         <div className="login-intro-copy">
@@ -576,7 +584,7 @@ function LoginPage() {
             className="login-form"
             onSubmit={handleLogin}
           >
-            <label htmlFor="student-identifier">Student ID or Email</label>
+            <label htmlFor="student-identifier">Username</label>
             <input
               id="student-identifier"
               name="identifier"
@@ -734,7 +742,9 @@ function HomePage() {
       <header className="site-header">
         <div className="container header-content">
           <a className="brand" href="#home" aria-label="ClearanceDNSC home">
-            <span className="brand-mark" aria-hidden="true" />
+            <span className="brand-mark" aria-hidden="true">
+              <img src={eclearanceLogo} alt="" />
+            </span>
             <span>ClearanceDNSC</span>
           </a>
           <button
@@ -996,7 +1006,24 @@ function App() {
   }, [accountKind, currentPath, hasAuthToken, isAdminPage, isDashboardPage, isDesignPreview, isForgotPasswordPage, isLoginPage, isSignatoryPage])
 
   if (hasAuthToken && accountKind === 'unknown' && (isAdminPage || isDashboardPage || isLoginPage || isSignatoryPage)) {
-    return <PortalLoading title="Checking your account" detail="Confirming which portal this sign-in should open." />
+    return <PortalLoading variant="account" title="Checking your account" detail="Confirming which portal this sign-in should open." />
+  }
+  if (accountKind === 'unsupported') {
+    return (
+      <div role="alert">
+        <p>Superadmin does not open the admin portal. Sign in with a school admin, institute admin, clearance admin, or institute staff account.</p>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('auth_token')
+            localStorage.removeItem('auth_refresh_token')
+            window.location.assign('/login')
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    )
   }
   if (accountKind === 'error' && (isAdminPage || isDashboardPage || isSignatoryPage)) {
     return (
@@ -1017,14 +1044,14 @@ function App() {
   }
   if (isSignatoryPage) {
     return hasAuthToken && accountKind === 'signatory' ? (
-      <Suspense fallback={<PortalLoading title="Loading the signatory portal" detail="Opening the approval queue for this account." />}>
+      <Suspense fallback={<PortalLoading variant="signatory" title="Loading the signatory portal" detail="Opening the approval queue for this account." />}>
         <SignatoryPortal />
       </Suspense>
     ) : null
   }
   if (isAdminPage) {
     return hasAuthToken && accountKind === 'admin' ? (
-      <Suspense fallback={<PortalLoading title="Loading the admin portal" detail="Opening the admin dashboard." />}>
+      <Suspense fallback={<PortalLoading variant="admin" title="Loading the admin portal" detail="Opening the admin dashboard." />}>
         <AdminPortal />
       </Suspense>
     ) : null

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import dnscLogo from "../assets/dnsc-logo.jpg";
+import eclearanceLogo from "../assets/eclearance-logo.png";
 import { signOut } from "../services/auth";
+import AccountMenu from "./AccountMenu.jsx";
 import { fetchNotifications, markAllNotificationsRead } from "../services/notifications";
+import { requestPortalRefresh, subscribePortalRefresh } from "../services/portalRefresh.js";
 import "../styles/navigation.css";
 
 function MobileNavigation({
@@ -9,6 +11,9 @@ function MobileNavigation({
   setActiveTab,
   avatarUrl,
   userInitials,
+  displayName = "Student",
+  email = "",
+  roleName = "Student",
   injectedAlert,
   clearInjectedAlert,
 }) {
@@ -21,20 +26,24 @@ function MobileNavigation({
 
   useEffect(() => {
     let isMounted = true;
-    fetchNotifications()
-      .then((items) => {
-        if (!isMounted) return;
-        setNotifications(items);
-        setHasUnread(items.some((item) => !item.is_read));
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.error("Failed to load notifications:", error);
-        setNotificationError("Could not load notifications. Please try again.");
-      });
-
+    function loadNotifications() {
+      fetchNotifications()
+        .then((items) => {
+          if (!isMounted) return;
+          setNotifications(items);
+          setHasUnread(items.some((item) => !item.is_read));
+        })
+        .catch((error) => {
+          if (!isMounted) return;
+          console.error("Failed to load notifications:", error);
+          setNotificationError("Could not load notifications. Please try again.");
+        });
+    }
+    loadNotifications();
+    const stopRefresh = subscribePortalRefresh(loadNotifications);
     return () => {
       isMounted = false;
+      stopRefresh();
     };
   }, []);
 
@@ -127,17 +136,6 @@ function MobileNavigation({
         </>
       ),
     },
-    {
-      key: "profile",
-      label: "Profile",
-      match: ["profile"],
-      icon: (
-        <>
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </>
-      ),
-    },
   ];
 
   return (
@@ -149,17 +147,17 @@ function MobileNavigation({
 
       {/* ===== Top bar ===== */}
       <div className="mobile-top-bar">
-        <button type="button" className="mobile-left-section" onClick={() => goTo("dashboard")}>
+        <div className="mobile-top-main">
+        <button type="button" className="mobile-left-section" aria-label="Refresh" onClick={requestPortalRefresh}>
           <div className="mobile-logo-badge">
-            <img src={dnscLogo} alt="DNSC Logo" />
+            <img src={eclearanceLogo} alt="E-Clearance" />
           </div>
           <div className="mobile-brand-info">
-            <h2>ClearanceDNSC</h2>
-            <p>Student Portal</p>
+            <h2>Davao del Norte State College</h2>
+            <p>Student portal</p>
           </div>
         </button>
 
-        <div className="right-icons">
           <div className="notification-container">
             <button
               type="button"
@@ -204,7 +202,9 @@ function MobileNavigation({
               </div>
             )}
           </div>
+        </div>
 
+        <div className="right-icons">
           <div className="profile-container">
             <button
               type="button"
@@ -223,23 +223,23 @@ function MobileNavigation({
                   <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#3a3c30" }}>{userInitials}</span>
                 )}
               </div>
-              <span>▼</span>
+              <span className="profile-identity">
+                <strong>{displayName}</strong>
+                <small>{roleName}</small>
+              </span>
+              <span className="profile-caret" aria-hidden="true">▾</span>
             </button>
 
             {showProfile && (
-              <div className="profile-dropdown mobile-dropdown-panel">
-                <div className="dropdown-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                </div>
-                <div className="dropdown-text">
-                  <button type="button" onClick={signOut}>Sign Out</button>
-                  <button type="button" onClick={() => goTo("profile")}>Account</button>
-                </div>
-              </div>
+              <AccountMenu
+                avatarUrl={avatarUrl}
+                initials={userInitials}
+                displayName={displayName}
+                email={email}
+                roleName={roleName}
+                onProfile={() => goTo("profile")}
+                onLogout={signOut}
+              />
             )}
           </div>
         </div>

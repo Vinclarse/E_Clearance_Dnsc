@@ -85,6 +85,9 @@ function MainContent({ requirements, onUploadProof }) {
                   </div>
                   <div className="requirement-meta">
                     <span>{item.authorizing_role_name || `Step ${stepNumber}`}</span>
+                    {(item.proof_attachment || item.proof_uploaded_at) && !isCleared && (
+                      <span>Proof submitted</span>
+                    )}
                     {clearedAt && <span>{clearedAt}</span>}
                     {isLocked && (
                       <span className="locked-message" title="Complete the earlier step first">

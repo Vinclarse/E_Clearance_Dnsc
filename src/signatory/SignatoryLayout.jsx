@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import dnscLogo from '../assets/dnsc-logo.jpg';
+import eclearanceLogo from '../assets/eclearance-logo.png';
+import AccountMenu from '../components/AccountMenu.jsx';
+import { requestPortalRefresh } from '../services/portalRefresh.js';
 
 const navTabs = [
   {
@@ -60,6 +62,7 @@ export default function SignatoryLayout({
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
   onSignOut,
+  onOpenProfile,
   children,
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -86,11 +89,11 @@ export default function SignatoryLayout({
   return (
     <div className="signatory-shell" style={{ backgroundColor: '#D7DCD0', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", padding: '1rem 1.5rem' }}>
       <div className="signatory-mobile-top">
-        <button type="button" className="signatory-mobile-brand" onClick={() => onSelectPage('SIG1')}>
-          <img src={dnscLogo} alt="" />
+        <button type="button" className="signatory-mobile-brand" aria-label="Refresh" onClick={requestPortalRefresh}>
+          <img src={eclearanceLogo} alt="" />
           <span>
-            <strong>ClearanceDNSC</strong>
-            <small>Signatory Portal</small>
+            <strong>Davao del Norte State College</strong>
+            <small>Signatory portal</small>
           </span>
         </button>
         <div className="signatory-mobile-actions">
@@ -115,15 +118,30 @@ export default function SignatoryLayout({
             aria-label="Open account menu"
             onClick={() => setShowProfileMenu((open) => !open)}
           >
-            <span>{profileInitials}</span>
-            <small>▾</small>
+            <span className="signatory-mobile-avatar">
+              {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : profileInitials}
+            </span>
+            <span className="signatory-mobile-identity">
+              <strong>{profile.displayName}</strong>
+              <small>{profile.role}</small>
+            </span>
+            <small className="signatory-mobile-caret">▾</small>
           </button>
         </div>
         {showProfileMenu && (
           <div className="signatory-mobile-account">
-            <strong>{profile.displayName}</strong>
-            <small>{profile.role}</small>
-            <button type="button" onClick={() => onSignOut?.()}>Sign Out</button>
+            <AccountMenu
+              avatarUrl={profile.avatarUrl}
+              initials={profileInitials}
+              displayName={profile.displayName}
+              email={profile.email}
+              roleName={profile.role}
+              onProfile={() => {
+                setShowProfileMenu(false);
+                onOpenProfile?.();
+              }}
+              onLogout={() => onSignOut?.()}
+            />
           </div>
         )}
       </div>
@@ -145,45 +163,41 @@ export default function SignatoryLayout({
       
       {/* Top Header Card */}
       <header className="signatory-header" style={{
-        backgroundColor: '#EAEFE6',
-        borderRadius: '50px',
-        padding: '0.6rem 1.2rem',
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        padding: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: 12,
         marginBottom: '1.2rem',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+        boxShadow: 'none'
       }}>
         
         {/* Left: Institute Brand */}
-        <div className="signatory-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: '50%',
-            backgroundColor: '#FFFFFF',
-            display: 'grid',
-            placeItems: 'center',
-            fontWeight: 'bold',
-            color: '#2E3D28',
-            fontSize: '0.8rem'
-          }}>
-            IC
-          </div>
+        <button type="button" className="signatory-brand" aria-label="Refresh" onClick={requestPortalRefresh} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', height: 54, boxSizing: 'border-box', background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 999, padding: '6px 16px 6px 8px', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', flexShrink: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+          <img
+            src={eclearanceLogo}
+            alt="E-Clearance"
+            style={{ width: 40, height: 40, objectFit: 'contain', background: 'transparent' }}
+          />
           <div>
-            <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#29352A' }}>Institute of Computing</div>
-            <div style={{ fontSize: '0.72rem', color: '#74806E' }}>Davao del Norte State College</div>
+            <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#29352A' }}>Davao del Norte State College</div>
+            <div style={{ fontSize: '0.72rem', color: '#74806E' }}>Signatory portal</div>
           </div>
-        </div>
+        </button>
 
         {/* Center: Main Pill Navigation */}
         <nav className="signatory-nav" style={{
           backgroundColor: '#2E3D28',
-          padding: '0.55rem',
-          borderRadius: '40px',
+          padding: '6px 8px',
+          height: 54,
+          boxSizing: 'border-box',
+          borderRadius: 999,
           display: 'flex',
           alignItems: 'center',
-          gap: '0.2rem'
+          gap: '0.2rem',
+          flex: 1,
         }}>
           {navTabs.map((tab) => {
             const isActive = activePage === tab.id;
@@ -196,25 +210,30 @@ export default function SignatoryLayout({
                   color: isActive ? '#FFFFFF' : '#B6C798',
                   border: 'none',
                   padding: 0,
-                  borderRadius: '30px',
+                  borderRadius: '999px',
                   fontWeight: '500',
-                  fontSize: '0.82rem',
+                  fontSize: '13px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  flex: '1 1 0',
+                  minWidth: 0,
+                  height: '100%',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <span style={{
                   backgroundColor: isActive ? '#51664C' : 'transparent',
-                  borderRadius: '30px',
-                  padding: '0.55rem 0.75rem',
+                  borderRadius: '999px',
+                  padding: '8px 12px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.4rem',
-                  width: '12rem',
+                  width: '100%',
+                  height: '100%',
+                  boxSizing: 'border-box',
                   whiteSpace: 'nowrap',
                   transition: 'background-color 0.15s ease'
                 }}>
@@ -239,7 +258,6 @@ export default function SignatoryLayout({
 
         {/* Right: Notifications & User Avatar */}
         <div className="signatory-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', position: 'relative' }}>
-          
           {/* Notification Button */}
           <button
             type="button"
@@ -250,8 +268,8 @@ export default function SignatoryLayout({
               setShowProfileMenu(false);
             }}
             style={{
-              width: 48,
-              height: 48,
+              width: 54,
+              height: 54,
               borderRadius: '50%',
               backgroundColor: '#FFFFFF',
               color: '#2E3D28',
@@ -302,15 +320,18 @@ export default function SignatoryLayout({
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             aria-expanded={showProfileMenu}
             style={{
-              backgroundColor: '#2E3D28',
-              color: '#FFF',
-              padding: '0.5rem 1rem 0.5rem 0.5rem',
-              minHeight: 56,
-              border: 'none',
-              borderRadius: '30px',
+              backgroundColor: '#FFFFFF',
+              color: '#1a2810',
+              padding: '0.3rem 0.8rem 0.3rem 0.3rem',
+              height: 54,
+              minHeight: 54,
+              boxSizing: 'border-box',
+              border: '1px solid rgba(0,0,0,0.09)',
+              borderRadius: '999px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.6rem',
+              gap: '0.55rem',
               cursor: 'pointer'
             }}
           >
@@ -318,37 +339,39 @@ export default function SignatoryLayout({
               width: 40,
               height: 40,
               borderRadius: '50%',
-              backgroundColor: '#FFF',
-              color: '#2E3D28',
+              backgroundColor: '#2E3D28',
+              color: '#FFF',
               display: 'grid',
               placeItems: 'center',
               fontWeight: 'bold',
-              fontSize: '0.85rem'
+              fontSize: '0.85rem',
+              overflow: 'hidden',
             }}>
-              {profileInitials}
+              {profile.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : profileInitials}
             </div>
             <div>
               <div className="signatory-profile-copy" style={{ fontSize: '0.8rem', fontWeight: '700', lineHeight: 1.1 }}>{profile.displayName}</div>
-              <div className="signatory-profile-copy" style={{ fontSize: '0.65rem', color: '#B6C798' }}>{profile.role}</div>
+              <div className="signatory-profile-copy" style={{ fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{profile.role}</div>
             </div>
             <span style={{ fontSize: '0.7rem' }}>▼</span>
           </button>
 
           {/* Dropdown Profile Menu */}
           {showProfileMenu && (
-            <div style={{
-              position: 'absolute',
-              top: '50px',
-              right: 0,
-              backgroundColor: '#FFF',
-              borderRadius: '12px',
-              padding: '0.5rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              zIndex: 100,
-              minWidth: '180px'
-            }}>
-              <button onClick={() => onSignOut?.()} style={{ width: '100%', textAlign: 'left', padding: '0.5rem 0.8rem', border: 'none', background: 'none', color: '#AA5757', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 'bold' }}>Log Out</button>
-            </div>
+            <AccountMenu
+              avatarUrl={profile.avatarUrl}
+              initials={profileInitials}
+              displayName={profile.displayName}
+              email={profile.email}
+              roleName={profile.role}
+              onProfile={() => {
+                setShowProfileMenu(false);
+                onOpenProfile?.();
+              }}
+              onLogout={() => onSignOut?.()}
+            />
           )}
 
         </div>

@@ -108,6 +108,24 @@
   box-shadow: var(--shadow-sm);
 }
 
+.sd2-year-card {
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.sd2-stat-card.dark.sd2-year-card {
+  border: 0;
+  color: #fff;
+}
+
+.sd2-year-card.active {
+  border-color: var(--bg-navbar);
+  box-shadow: inset 0 0 0 1px var(--bg-navbar);
+}
+
 .sd2-stat-dark-icon {
   width: 40px;
   height: 40px;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import statusApproved from '../assets/status-approved.svg';
+import { termFromRecords } from '../services/clearanceDisplay.js';
 
 export default function SIG1({ profile, students, metrics, onUpdateStudent, onNavigateToQueue }) {
   const queue = students.map((student) => ({
@@ -37,7 +38,7 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
 
   const handleApprove = (studentId) => {
     const student = queue.find((item) => item.id === studentId);
-    if (!student || student.status === 'Approved') return;
+    if (!student || student.status === 'Approved' || student.isActionable === false) return;
 
     onUpdateStudent(studentId, { status: 'Cleared' });
     setActivity((current) => [
@@ -121,7 +122,7 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
                 <tr key={student.id} style={{ borderBottom: '1px solid #F6F8F4' }}>
                   <td style={{ padding: '0.85rem 0' }}>
                     <div style={{ fontWeight: '700', color: '#29352A' }}>{student.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{student.id} · {student.course}</div>
+                    <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{student.studentNumber || '—'} · {student.course || '—'}</div>
                   </td>
                   <td style={{ color: '#51664C', fontWeight: '500' }}>{student.req}</td>
                   <td>
@@ -144,18 +145,19 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
                     ) : (
                       <button
                         onClick={() => handleApprove(student.id)}
+                        disabled={student.isActionable === false}
                         style={{
-                          backgroundColor: student.status === 'Under Review' ? '#E2E7DC' : '#2E3D28',
-                          color: student.status === 'Under Review' ? '#29352A' : '#FFF',
+                          backgroundColor: student.isActionable === false ? '#E2E7DC' : '#2E3D28',
+                          color: student.isActionable === false ? '#74806E' : '#FFF',
                           border: 'none',
                           padding: '0.45rem 1rem',
                           borderRadius: '20px',
                           fontWeight: '700',
                           fontSize: '0.75rem',
-                          cursor: 'pointer'
+                          cursor: student.isActionable === false ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {student.status === 'Under Review' ? 'Inspect Proof' : 'Approve'}
+                        {student.isActionable === false ? 'Locked' : 'Approve'}
                       </button>
                     )}
                   </td>
@@ -164,7 +166,7 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
             </tbody>
           </table>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem', fontSize: '0.78rem', color: '#74806E' }}>
+          <div className="signatory-pagination-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem', fontSize: '0.78rem', color: '#74806E' }}>
             <span>Showing {firstRecord}–{lastRecord} of {queue.length} records</span>
             <nav aria-label="Queue pagination" style={{ display: 'flex', gap: '0.3rem' }}>
               <button
@@ -188,6 +190,15 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
                 <button
                   key={page}
                   type="button"
+                  className={
+                    page === 1 ||
+                    page === pageCount ||
+                    page === activePage ||
+                    page === activePage - 1 ||
+                    page === activePage + 1
+                      ? 'signatory-page-mobile-visible'
+                      : 'signatory-page-mobile-hide'
+                  }
                   aria-current={activePage === page ? 'page' : undefined}
                   onClick={() => setCurrentPage(page)}
                   style={{
@@ -233,13 +244,13 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
         {/* Welcome Banner */}
         <div style={{ backgroundColor: '#2E3D28', color: '#FFF', borderRadius: '20px', padding: '1.2rem', height: '9rem' }}>
           <div style={{ fontSize: '0.65rem', color: '#B6C798', letterSpacing: '0.05em', fontWeight: '800' }}>
-            1ST SEMESTER, AY 2026-2027 • SEMESTRAL CLEARANCE
+            {termFromRecords(students) || "Student clearance"}
           </div>
           <h2 style={{ fontSize: '0.9rem', margin: '0.2rem 0', letterSpacing: '-0.02em' }}>
             {greeting}, {profile.displayName || `${profile.title ?? ""} ${profile.lastName ?? ""}`.trim()}
           </h2>
           <p style={{ fontSize: '0.68rem', color: '#DCE5D2', margin: '0 0 0.4rem 0' }}>
-            You have {pendingCount} students waiting at Step 4.
+            You have {pendingCount} students waiting at {students[0]?.req || 'this step'}.
           </p>
           <button
             onClick={onNavigateToQueue}

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { fetchClearanceItem } from './signatoryApi.js';
+import { termFromRecords } from '../services/clearanceDisplay.js';
+import ProofPreview from './ProofPreview.jsx';
 
 function QueueIcon({ children, label }) {
   return (
@@ -11,11 +14,36 @@ function QueueIcon({ children, label }) {
 export default function SIG2({ students, onUpdateStudent }) {
   const [search, setSearch] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
+  const [selectedYear, setSelectedYear] = useState('All years');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [inspectingStudent, setInspectingStudent] = useState(null);
+  const [proofLoading, setProofLoading] = useState(false);
+  const [proofFailed, setProofFailed] = useState(false);
+  const [proofError, setProofError] = useState('');
 
   const pageSize = 8;
+
+  const openProof = (student) => {
+    setInspectingStudent(student);
+    setProofFailed(false);
+    setProofError('');
+    if (student.proofUrl || !student.itemId) {
+      setProofLoading(false);
+      return;
+    }
+    setProofLoading(true);
+    fetchClearanceItem(student.itemId)
+      .then((detail) => {
+        setInspectingStudent((current) => (
+          current && current.id === student.id
+            ? { ...current, proofUrl: detail.proofUrl, proof: detail.proof || current.proof, proofDetails: current.proofDetails || detail.proofDetails }
+            : current
+        ));
+      })
+      .catch(() => setProofError('The proof file could not be loaded.'))
+      .finally(() => setProofLoading(false));
+  };
 
   const updateStudentStatus = (id, newStatus) => {
     const student = students.find((item) => item.id === id);
@@ -25,10 +53,11 @@ export default function SIG2({ students, onUpdateStudent }) {
   };
 
   const filteredStudents = students.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || String(s.id).includes(search);
-    const matchesProgram = selectedProgram === 'All Programs' || s.program.includes(selectedProgram);
+    const matchesSearch = String(s.name || "").toLowerCase().includes(search.toLowerCase()) || String(s.id).includes(search);
+    const matchesProgram = selectedProgram === 'All Programs' || String(s.program || "").includes(selectedProgram);
+    const matchesYear = selectedYear === 'All years' || String(s.yearLevel) === selectedYear;
     const matchesStatus = selectedStatus === 'All' || s.status === selectedStatus;
-    return matchesSearch && matchesProgram && matchesStatus;
+    return matchesSearch && matchesProgram && matchesYear && matchesStatus;
   });
   const pageCount = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
   const activePage = Math.min(currentPage, pageCount);
@@ -70,10 +99,27 @@ export default function SIG2({ students, onUpdateStudent }) {
 
           </select>
 
+          <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#74806E', letterSpacing: '0.05em' }}>YEAR</label>
+          <select
+            aria-label="Filter by year"
+            value={selectedYear}
+            onChange={(e) => {
+              setSelectedYear(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', margin: '0.4rem 0 1rem 0', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+          >
+            <option>All years</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+          </select>
+
           <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#74806E', letterSpacing: '0.05em' }}>STATUS</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.4rem' }}>
             {[
-              { id: 'All', label: 'All', count: students.length },
+              { id: 'All', label: 'All status', count: students.length },
               { id: 'Pending', label: 'Pending', count: students.filter((student) => student.status === 'Pending').length },
               { id: 'Under Review', label: 'Under Review', count: students.filter((student) => student.status === 'Under Review').length },
               { id: 'Deficiency', label: 'Deficiency', count: students.filter((student) => student.status === 'Deficiency').length },
@@ -110,7 +156,9 @@ export default function SIG2({ students, onUpdateStudent }) {
         {/* Stage Requirement Card */}
         <div style={{ backgroundColor: '#2E3D28', color: '#FFF', borderRadius: '20px', padding: '1.2rem' }}>
           <small style={{ color: '#B6C798', fontSize: '0.65rem' }}>YOUR STAGE</small>
-          <h4 style={{ margin: '0.3rem 0 0.6rem 0', fontSize: '0.95rem' }}>Step 4 - Program Chair Approval</h4>
+          <h4 style={{ margin: '0.3rem 0 0.6rem 0', fontSize: '0.95rem' }}>
+            {students[0] ? `Step ${students[0].orderSequence || '—'} - ${students[0].req}` : 'Assigned requirement'}
+          </h4>
           <p style={{ fontSize: '0.75rem', color: '#DCE5D2', margin: 0, lineHeight: 1.4 }}>
             Steps are cleared in strict order. Students waiting on an earlier step show a locked Approve button.
           </p>
@@ -124,7 +172,7 @@ export default function SIG2({ students, onUpdateStudent }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#29352A' }}>Clearance Approval Queue</h3>
-            <span style={{ fontSize: '0.75rem', color: '#74806E' }}>1st Semester, AY 2026-2027 • Semestral Clearance</span>
+            <span style={{ fontSize: '0.75rem', color: '#74806E' }}>{termFromRecords(students) || "Student clearance"}</span>
           </div>
           <span style={{ backgroundColor: '#EDF1E8', color: '#29352A', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold' }}>
             {filteredStudents.length} student records
@@ -132,7 +180,7 @@ export default function SIG2({ students, onUpdateStudent }) {
         </div>
 
         <div className="signatory-table-scroll">
-        <table className="signatory-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+        <table className="signatory-table signatory-approval-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
           <thead>
             <tr style={{ color: '#74806E', borderBottom: '2px solid #EDF1E8', textAlign: 'left' }}>
               <th style={{ padding: '0.75rem 0' }}>STUDENT</th>
@@ -155,7 +203,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                     </div>
                     <div>
                       <div style={{ fontWeight: '700', color: '#29352A' }}>{st.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{st.id} · {st.program}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{st.studentNumber || '—'} · {st.program || '—'}</div>
                     </div>
                   </div>
                 </td>
@@ -163,7 +211,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                 {/* Requirement */}
                 <td>
                   <div style={{ fontWeight: '600' }}>{st.req}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#74806E' }}>Step 4 of 6</div>
+                  <div style={{ fontSize: '0.7rem', color: '#74806E' }}>Step {st.orderSequence || '—'} of 6</div>
                   {st.note && <div style={{ fontSize: '0.68rem', color: '#A77218' }}>{st.note}</div>}
                 </td>
 
@@ -196,7 +244,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                 {/* Proof Icon */}
                 <td>
                   {st.proof ? (
-                    <button type="button" aria-label={`View proof for ${st.name}`} onClick={() => setInspectingStudent(st)} style={{ backgroundColor: '#E2F1F7', color: '#3E7E9C', border: 'none', borderRadius: '8px', width: 32, height: 32, display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                    <button type="button" aria-label={`View proof for ${st.name}`} onClick={() => openProof(st)} style={{ backgroundColor: '#E2F1F7', color: '#3E7E9C', border: 'none', borderRadius: '8px', width: 32, height: 32, display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
                       <QueueIcon label="Proof">
                         <rect x="3" y="5" width="18" height="14" rx="2" />
                         <circle cx="8.5" cy="10" r="1.5" />
@@ -213,17 +261,17 @@ export default function SIG2({ students, onUpdateStudent }) {
                   <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end' }}>
                     <button
                       type="button"
-                      disabled={st.status === 'Cleared' || st.status === 'Deficiency'}
+                      disabled={st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false}
                       onClick={() => updateStudentStatus(st.id, 'Cleared')}
                       style={{
-                        backgroundColor: st.status === 'Cleared' || st.status === 'Deficiency' ? '#E2E7DC' : '#2E3D28',
-                        color: st.status === 'Cleared' || st.status === 'Deficiency' ? '#74806E' : '#FFF',
+                        backgroundColor: st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false ? '#E2E7DC' : '#2E3D28',
+                        color: st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false ? '#74806E' : '#FFF',
                         border: 'none',
                         padding: '0.35rem 0.7rem',
                         borderRadius: '14px',
                         fontWeight: '700',
                         fontSize: '0.75rem',
-                        cursor: st.status === 'Cleared' || st.status === 'Deficiency' ? 'not-allowed' : 'pointer',
+                        cursor: st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.3rem'
@@ -232,7 +280,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                       <QueueIcon>
                         <path d="M20 6L9 17l-5-5" />
                       </QueueIcon>
-                      {st.status === 'Cleared' ? 'Cleared' : st.status === 'Deficiency' ? 'Locked' : 'Approve'}
+                      {st.status === 'Cleared' ? 'Cleared' : st.status === 'Deficiency' || st.isActionable === false ? 'Locked' : 'Approve'}
                     </button>
 
                     <button
@@ -293,9 +341,9 @@ export default function SIG2({ students, onUpdateStudent }) {
         </div>
 
         {/* Pagination Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: '#74806E' }}>
+        <div className="signatory-queue-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.2rem', fontSize: '0.78rem', color: '#74806E' }}>
           <span>Showing {firstRecord}–{lastRecord} of {filteredStudents.length} records</span>
-          <div style={{ display: 'flex', gap: '0.3rem' }}>
+          <nav aria-label="Approval queue pagination" style={{ display: 'flex', gap: '0.3rem' }}>
             <button
               type="button"
               aria-label="Previous page"
@@ -317,6 +365,15 @@ export default function SIG2({ students, onUpdateStudent }) {
               <button
                 key={page}
                 type="button"
+                className={
+                  page === 1 ||
+                  page === pageCount ||
+                  page === activePage ||
+                  page === activePage - 1 ||
+                  page === activePage + 1
+                    ? 'signatory-page-mobile-visible'
+                    : 'signatory-page-mobile-hide'
+                }
                 aria-current={activePage === page ? 'page' : undefined}
                 onClick={() => setCurrentPage(page)}
                 style={{
@@ -350,56 +407,21 @@ export default function SIG2({ students, onUpdateStudent }) {
             >
               ›
             </button>
-          </div>
+          </nav>
         </div>
 
       </div>
 
-      {/* Inspect Modal Dialog */}
-      {inspectingStudent && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'grid',
-          placeItems: 'center',
-          zIndex: 1000
-        }}>
-          <div className="signatory-modal" style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '1.5rem', width: '420px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0' }}>Student Requirement Details</h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#74806E' }}>{inspectingStudent.name} ({inspectingStudent.id})</p>
-            
-            <div style={{ backgroundColor: '#F6F8F4', padding: '1rem', borderRadius: '12px', margin: '1rem 0', fontSize: '0.82rem' }}>
-              <div><strong>Program:</strong> {inspectingStudent.program}</div>
-              <div><strong>Status:</strong> {inspectingStudent.status}</div>
-              <div><strong>Deficiency:</strong> {inspectingStudent.proofDetails || 'None'}</div>
-              <div><strong>Amount Due:</strong> {inspectingStudent.fee}</div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button onClick={() => setInspectingStudent(null)} style={{ border: 'none', backgroundColor: '#EDF1E8', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>Close</button>
-              <button
-                type="button"
-                disabled={inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared'}
-                onClick={() => updateStudentStatus(inspectingStudent.id, 'Cleared')}
-                style={{
-                  border: 'none',
-                  backgroundColor: inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared' ? '#E2E7DC' : '#2E3D28',
-                  color: inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared' ? '#74806E' : '#FFF',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  cursor: inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared' ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {inspectingStudent.status === 'Deficiency' ? 'Resolve Deficiency First' : inspectingStudent.status === 'Cleared' ? 'Already Cleared' : 'Approve Sign-Off'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProofPreview
+        student={inspectingStudent}
+        loading={proofLoading}
+        error={proofError}
+        failed={proofFailed}
+        onImageError={() => setProofFailed(true)}
+        onClose={() => setInspectingStudent(null)}
+        onApprove={inspectingStudent ? () => updateStudentStatus(inspectingStudent.id, 'Cleared') : undefined}
+        approveDisabled={!inspectingStudent || inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false}
+      />
 
     </div>
   );
