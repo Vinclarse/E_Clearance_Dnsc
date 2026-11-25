@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Bell, User, Settings, LogOut, Menu, X, LayoutDashboard, FileText, Users, BadgeCheck, ScrollText } from "lucide-react";
 import eclearanceLogo from "../../assets/eclearance-logo.png";
 import { signOut } from "../../services/auth.js";
 import { fetchNotifications, markAllNotificationsRead } from "../../services/notifications.js";
 import { fetchCurrentAdmin, fetchUnreadCount } from "../services/dashboardApi.js";
 import { requestPortalRefresh, subscribeAccount, subscribePortalRefresh } from "../../services/portalRefresh.js";
+import { useDismissOnOutside } from "../../services/useDismissOnOutside.js";
 import "./Navbar.css";
 
 const navLinks = [
@@ -28,6 +29,19 @@ export default function Navbar() {
   const [profile,    setProfile]    = useState(null);
   const triggerRef                  = useRef(null);
   const dropdownRef                 = useRef(null);
+  const desktopBellRef              = useRef(null);
+  const desktopNotesRef             = useRef(null);
+  const mobileBellRef               = useRef(null);
+  const mobileNotesRef              = useRef(null);
+  const { pathname }                = useLocation();
+  useDismissOnOutside(
+    showNotes,
+    () => setShowNotes(false),
+    desktopBellRef,
+    desktopNotesRef,
+    mobileBellRef,
+    mobileNotesRef,
+  );
 
   useEffect(() => {
     let active = true;
@@ -50,6 +64,10 @@ export default function Navbar() {
       stopAccount();
     };
   }, []);
+
+  useEffect(() => {
+    setShowNotes(false);
+  }, [pathname]);
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   const displayName = fullName || profile?.username || "Administrator";
@@ -129,7 +147,9 @@ export default function Navbar() {
       <div className="portal-mobile-actions">
         <button
           type="button"
+          ref={mobileBellRef}
           className="portal-mobile-bell"
+          data-notification-toggle=""
           aria-label="Notifications"
           aria-expanded={showNotes}
           onClick={() => { setShowNotes((open) => !open); setShowAccount(false); }}
@@ -149,7 +169,7 @@ export default function Navbar() {
         </button>
       </div>
       {showNotes && (
-        <div className="portal-mobile-panel" role="dialog" aria-label="Notifications">
+        <div className="portal-mobile-panel" ref={mobileNotesRef} role="dialog" aria-label="Notifications">
           <div className="portal-mobile-panel-head">
             <strong>Notifications</strong>
             <button type="button" onClick={handleMarkNotesRead}>Mark all read</button>
@@ -233,7 +253,9 @@ export default function Navbar() {
       {/* ── SECTION 3: Bell — standalone circle ── */}
       <button
         type="button"
+        ref={desktopBellRef}
         className="nb-bell"
+        data-notification-toggle=""
         aria-label="Notifications"
         aria-expanded={showNotes}
         onClick={() => { setShowNotes((open) => !open); setShowMenu(false); }}
@@ -244,7 +266,7 @@ export default function Navbar() {
         )}
       </button>
       {showNotes && (
-        <div className="nb-note-panel" role="dialog" aria-label="Notifications">
+        <div className="nb-note-panel" ref={desktopNotesRef} role="dialog" aria-label="Notifications">
           <div className="portal-mobile-panel-head">
             <strong>Notifications</strong>
             <button type="button" onClick={handleMarkNotesRead}>Mark all read</button>

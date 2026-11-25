@@ -5,6 +5,13 @@
       "dest": "https://e-clearance-system-api.onrender.com/api/$1"
     },
     {
+      "src": "^/(dashboard|admin|signatory)(/.*)?$",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+      },
+      "dest": "/index.html"
+    },
+    {
       "handle": "filesystem"
     },
     {

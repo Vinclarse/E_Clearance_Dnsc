@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import eclearanceLogo from '../assets/eclearance-logo.png';
 import AccountMenu from '../components/AccountMenu.jsx';
 import { requestPortalRefresh } from '../services/portalRefresh.js';
+import { useDismissOnOutside } from '../services/useDismissOnOutside.js';
 
 const navTabs = [
   {
@@ -68,6 +69,14 @@ export default function SignatoryLayout({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [filterTab, setFilterTab] = useState('All');
+  const mobileBellRef = useRef(null);
+  const desktopBellRef = useRef(null);
+  const notesRef = useRef(null);
+  useDismissOnOutside(showNotifications, () => setShowNotifications(false), mobileBellRef, desktopBellRef, notesRef);
+
+  useEffect(() => {
+    setShowNotifications(false);
+  }, [activePage]);
 
   const unreadCount = notifications.filter((notification) => notification.unread).length;
   const notificationTabs = [
@@ -99,7 +108,9 @@ export default function SignatoryLayout({
         <div className="signatory-mobile-actions">
           <button
             type="button"
+            ref={mobileBellRef}
             className="signatory-mobile-bell"
+            data-notification-toggle=""
             aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
             onClick={() => {
               setShowNotifications((isOpen) => !isOpen);
@@ -261,6 +272,8 @@ export default function SignatoryLayout({
           {/* Notification Button */}
           <button
             type="button"
+            ref={desktopBellRef}
+            data-notification-toggle=""
             aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
             aria-expanded={showNotifications}
             onClick={() => {
@@ -401,6 +414,7 @@ export default function SignatoryLayout({
             }}
           />
           <aside
+            ref={notesRef}
             role="dialog"
             aria-modal="true"
             aria-label="Notifications"
