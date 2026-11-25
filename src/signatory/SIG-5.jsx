@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function SIG5({ students, onUpdateStudent }) {
   const [filter, setFilter] = useState('All');
+  const [year, setYear] = useState('All years');
   const [showAllRoster, setShowAllRoster] = useState(false);
 
   const roster = students.map((student) => ({
@@ -52,7 +53,10 @@ export default function SIG5({ students, onUpdateStudent }) {
     ? 0
     : Math.round((completedStudents / roster.length) * 100);
   const completionCircumference = 2 * Math.PI * 32;
-  const filteredRoster = roster.filter(s => filter === 'All' || s.status === filter);
+  const filteredRoster = roster.filter((student) => (
+    (filter === 'All' || student.status === filter)
+    && (year === 'All years' || String(student.yearLevel) === year)
+  ));
   const visibleRoster = showAllRoster ? filteredRoster : filteredRoster.slice(0, 3);
 
   return (
@@ -170,7 +174,22 @@ export default function SIG5({ students, onUpdateStudent }) {
         <div className="signatory-cohort-roster-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
           <h3 style={{ margin: 0, color: '#29352A', fontSize: '1.1rem' }}>Department Student Roster</h3>
           
-          <div className="signatory-cohort-filters" style={{ display: 'flex', gap: '0.4rem', backgroundColor: '#EDF1E8', padding: '0.25rem', borderRadius: '30px' }}>
+          <div className="signatory-cohort-filters" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap', backgroundColor: '#EDF1E8', padding: '0.25rem', borderRadius: '30px' }}>
+            <select
+              aria-label="Filter by year"
+              value={year}
+              onChange={(event) => {
+                setYear(event.target.value);
+                setShowAllRoster(false);
+              }}
+              style={{ border: 'none', background: 'transparent', color: '#29352A', fontSize: '0.75rem', fontWeight: 700, padding: '0.35rem 0.6rem' }}
+            >
+              <option>All years</option>
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+            </select>
             {['All', 'Completed', 'In Progress', 'Deficiency'].map((f) => (
               <button
                 key={f}
@@ -189,7 +208,7 @@ export default function SIG5({ students, onUpdateStudent }) {
                   cursor: 'pointer'
                 }}
               >
-                {f}
+                {f === 'All' ? 'All status' : f}
               </button>
             ))}
           </div>
