@@ -955,6 +955,31 @@ function App() {
   }, [])
 
   useEffect(() => {
+    function isProtectedPath(path) {
+      return path === '/dashboard'
+        || path === '/admin'
+        || path.startsWith('/admin/')
+        || path === '/signatory'
+        || path.startsWith('/signatory/')
+    }
+
+    function onPageShow(event) {
+      const navigation = performance.getEntriesByType('navigation')[0]
+      const restored = event.persisted || navigation?.type === 'back_forward'
+      if (!restored) return
+      const path = window.location.pathname.replace(/\/+$/, '') || '/'
+      if (!isProtectedPath(path)) return
+      if (localStorage.getItem('auth_token')) return
+      const root = document.getElementById('root')
+      if (root) root.hidden = true
+      window.location.replace('/login')
+    }
+
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
+
+  useEffect(() => {
     if (!hasAuthToken) return undefined
 
     let isCurrent = true

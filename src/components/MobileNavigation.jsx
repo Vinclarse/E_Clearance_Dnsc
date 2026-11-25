@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import eclearanceLogo from "../assets/eclearance-logo.png";
 import { signOut } from "../services/auth";
 import AccountMenu from "./AccountMenu.jsx";
 import { fetchNotifications, markAllNotificationsRead } from "../services/notifications";
 import { requestPortalRefresh, subscribePortalRefresh } from "../services/portalRefresh.js";
+import { useDismissOnOutside } from "../services/useDismissOnOutside.js";
 import "../styles/navigation.css";
 
 function MobileNavigation({
@@ -18,6 +19,8 @@ function MobileNavigation({
   clearInjectedAlert,
 }) {
   const [showNotification, setShowNotification] = useState(false);
+  const notificationRef = useRef(null);
+  useDismissOnOutside(showNotification, () => setShowNotification(false), notificationRef);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [hasUnread, setHasUnread] = useState(false);
@@ -158,10 +161,11 @@ function MobileNavigation({
           </div>
         </button>
 
-          <div className="notification-container">
+          <div className="notification-container" ref={notificationRef}>
             <button
               type="button"
               className={`notification-btn ${showNotification ? "active" : ""}`}
+              data-notification-toggle=""
               onClick={toggleNotification}
               aria-label="Notifications"
               aria-expanded={showNotification}
