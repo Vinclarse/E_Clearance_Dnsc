@@ -1,10 +1,22 @@
 import { useState, useEffect } from "react";
 import eclearanceLogo from "../assets/eclearance-logo.png";
 import { signOut } from "../services/auth";
+import AccountMenu from "./AccountMenu.jsx";
 import { fetchNotifications, markAllNotificationsRead } from "../services/notifications";
+import { requestPortalRefresh, subscribePortalRefresh } from "../services/portalRefresh.js";
 import "../styles/navigation.css";
 
-function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injectedAlert, clearInjectedAlert }) {
+function Navigation({
+  activeTab,
+  setActiveTab,
+  avatarUrl,
+  userInitials,
+  displayName = "Student",
+  email = "",
+  roleName = "Student",
+  injectedAlert,
+  clearInjectedAlert,
+}) {
   const [showNotification, setShowNotification] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -14,20 +26,24 @@ function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injected
 
   useEffect(() => {
     let isMounted = true;
-    fetchNotifications()
-      .then((items) => {
-        if (!isMounted) return;
-        setNotifications(items);
-        setHasUnread(items.some((item) => !item.is_read));
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        console.error("Failed to load notifications:", error);
-        setNotificationError("Could not load notifications. Please try again.");
-      });
-
+    function loadNotifications() {
+      fetchNotifications()
+        .then((items) => {
+          if (!isMounted) return;
+          setNotifications(items);
+          setHasUnread(items.some((item) => !item.is_read));
+        })
+        .catch((error) => {
+          if (!isMounted) return;
+          console.error("Failed to load notifications:", error);
+          setNotificationError("Could not load notifications. Please try again.");
+        });
+    }
+    loadNotifications();
+    const stopRefresh = subscribePortalRefresh(loadNotifications);
     return () => {
       isMounted = false;
+      stopRefresh();
     };
   }, []);
 
@@ -74,11 +90,12 @@ function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injected
       <button
         type="button"
         className="logo-section desktop-brand"
-        onClick={(e) => handleTabClick(e, "dashboard")}
+        aria-label="Refresh"
+        onClick={requestPortalRefresh}
       >
         <img src={eclearanceLogo} alt="E-Clearance" />
         <span className="desktop-brand-info">
-          <strong>ClearanceDNSC</strong>
+          <strong>Davao del Norte State College</strong>
           <small>Student portal</small>
         </span>
       </button>
@@ -92,15 +109,6 @@ function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injected
               onClick={(e) => handleTabClick(e, "dashboard")}
             >
               Dashboard
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#" 
-              className={activeTab === "profile" ? "active-link" : ""} 
-              onClick={(e) => handleTabClick(e, "profile")}
-            >
-              Profile
             </a>
           </li>
           <li>
@@ -184,28 +192,28 @@ function Navigation({ activeTab, setActiveTab, avatarUrl, userInitials, injected
           >
             <div className="profile-circle-placeholder" style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
               ) : (
                 <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#3a3c30", fontStyle: "normal" }}>{userInitials}</span>
               )}
             </div>
-            <span>▼</span>
+            <span className="profile-identity">
+              <strong>{displayName}</strong>
+              <small>{roleName}</small>
+            </span>
+            <span className="profile-caret" aria-hidden="true">▾</span>
           </button>
 
           {showProfile && (
-            <div className="profile-dropdown">
-              <div className="dropdown-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                  <polyline points="16 17 21 12 16 7"></polyline>
-                  <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-              </div>
-              <div className="dropdown-text">
-                <button type="button" onClick={signOut}>Sign Out</button>
-                <button type="button" onClick={(e) => handleTabClick(e, "profile")}>Account</button>
-              </div>
-            </div>
+            <AccountMenu
+              avatarUrl={avatarUrl}
+              initials={userInitials}
+              displayName={displayName}
+              email={email}
+              roleName={roleName}
+              onProfile={(event) => handleTabClick(event, "profile")}
+              onLogout={signOut}
+            />
           )}
         </div>
       </div>

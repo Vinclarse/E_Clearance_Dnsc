@@ -1,4 +1,4 @@
-import { displayApiText, formatAcademicYear } from "../services/clearanceDisplay";
+import { formatClearanceTerm } from "../services/clearanceDisplay";
 
 function ClearanceTracker({ requirements = [], overallStatus, clearance }) {
   const deficiencyCount = requirements.filter(item => item.status && item.status.toLowerCase() === "deficiency").length;
@@ -65,10 +65,7 @@ function ClearanceTracker({ requirements = [], overallStatus, clearance }) {
           </div>
           <div className="tracker-blueprint-side-mini-capsule-filled">
             <span className="side-capsule-label">Active Tracking Term</span>
-            <h3 className="side-capsule-val-text">{displayApiText(clearance?.semester) || "—"}</h3>
-            <span className="side-capsule-subtext-text">
-              {formatAcademicYear(clearance?.academic_year) || "Academic year unavailable"}
-            </span>
+            <h3 className="side-capsule-val-text">{formatClearanceTerm(clearance) || "Term unavailable"}</h3>
           </div>
         </div>
       </div>

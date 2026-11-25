@@ -22,7 +22,7 @@ function RequirementsSection() {
   }, []);
 
   if (loading) {
-    return <PortalLoading title="Loading your requirements" detail="Getting the steps on your clearance." />;
+    return <PortalLoading variant="list" title="Loading your requirements" detail="Getting the steps on your clearance." />;
   }
 
   if (requirements.length === 0) {

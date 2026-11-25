@@ -157,6 +157,7 @@ export default function ClearanceTemplates() {
   if (loading && !title && !error) {
     return (
       <PortalLoading
+        variant="templates"
         title="Loading clearance templates"
         detail="Getting the issued template, its steps, and who it covers."
       />

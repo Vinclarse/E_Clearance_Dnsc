@@ -15,9 +15,10 @@ export default function SIG5({ students, onUpdateStudent }) {
     clearedCount: student.steps.filter(Boolean).length,
   }));
 
-  const toggleValidate = (id) => {
+  const validateEnrollment = (id) => {
     const student = students.find((item) => item.id === id);
-    if (student) onUpdateStudent(id, { validated: !student.validated });
+    if (!student || student.validated || !student.steps.every(Boolean)) return;
+    onUpdateStudent(id, { validated: true });
   };
 
   const completedStudents = roster.filter((student) => student.status === 'Completed').length;
@@ -32,7 +33,7 @@ export default function SIG5({ students, onUpdateStudent }) {
     students.filter((student) => student.steps[index]).length,
   );
   const maxStudentsPerStep = Math.max(1, ...studentsPerStep);
-  const bsitCount = students.filter((student) => student.program === 'BSIT').length;
+  const bsitCount = students.filter((student) => /bsit/i.test(student.program)).length;
   const yearBreakdown = Array.from({ length: 4 }, (_, index) => {
     const yearLevel = index + 1;
     const suffix = yearLevel === 1 ? 'st' : yearLevel === 2 ? 'nd' : yearLevel === 3 ? 'rd' : 'th';
@@ -211,11 +212,11 @@ export default function SIG5({ students, onUpdateStudent }) {
                 <td style={{ padding: '0.85rem 0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', backgroundColor: '#91A778', color: '#FFF', display: 'grid', placeItems: 'center', fontWeight: 'bold', fontSize: '0.75rem' }}>
-                      {st.name.split(' ').map(n=>n[0]).join('')}
+                      {String(st.name || "").split(" ").map((part) => part[0]).join("")}
                     </div>
                     <div>
                       <div style={{ fontWeight: '700', color: '#29352A' }}>{st.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{st.id} · {st.course}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#74806E' }}>{st.studentNumber || '—'} · {st.course || '—'}</div>
                     </div>
                   </div>
                 </td>
@@ -261,11 +262,14 @@ export default function SIG5({ students, onUpdateStudent }) {
 
                 {/* Validation Button Action */}
                 <td style={{ textAlign: 'right' }}>
-                  {st.status === 'Completed' ? (
+                  {st.status === 'Completed' && st.validated ? (
+                    <span style={{ color: '#458469', fontWeight: '700', fontSize: '0.75rem' }}>Enrolled for next term</span>
+                  ) : st.status === 'Completed' ? (
                     <button
-                      onClick={() => toggleValidate(st.id)}
+                      type="button"
+                      onClick={() => validateEnrollment(st.id)}
                       style={{
-                        backgroundColor: st.validated ? '#2E3D28' : '#51664C',
+                        backgroundColor: '#51664C',
                         color: '#FFF',
                         border: 'none',
                         padding: '0.45rem 1rem',
@@ -275,7 +279,7 @@ export default function SIG5({ students, onUpdateStudent }) {
                         cursor: 'pointer'
                       }}
                     >
-                      {st.validated ? '✓ Enrolled for Next Term' : 'Validate for Enrollment'}
+                      Validate for Enrollment
                     </button>
                   ) : (
                     <button disabled style={{ backgroundColor: '#EDF1E8', color: '#74806E', border: 'none', padding: '0.45rem 1rem', borderRadius: '20px', fontSize: '0.75rem', cursor: 'not-allowed' }}>

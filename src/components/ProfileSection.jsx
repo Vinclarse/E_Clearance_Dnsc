@@ -1,300 +1,368 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, Save, Lock, Mail, User, Shield } from "lucide-react";
 import apiClient from "../services/api";
+import { fetchCurrentUser } from "../services/account.js";
+import { publishAccount, subscribePortalRefresh } from "../services/portalRefresh.js";
 import PasswordInput from "./PasswordInput.jsx";
 import PortalLoading from "./PortalLoading.jsx";
+import "../admin/pages/Profile.css";
 
-function getProfileUpdateErrorMessage(error) {
-  const responseData = error.response?.data;
+function profileImage(profile) {
+  const value = profile?.profile_url || profile?.profile;
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function errorMessage(error, fallback) {
+  const responseData = error?.response?.data;
   const errorData = responseData?.data ?? responseData;
   const errors = errorData?.errors ?? responseData?.errors;
   const fieldError = Object.values(errors ?? {})
     .flat()
     .find((value) => typeof value === "string");
   const message =
-    errorData?.detail ??
-    errors?.detail ??
-    fieldError ??
-    errorData?.error ??
-    (responseData?.message !== "Error" ? responseData?.message : undefined);
-
-  if (typeof message === "string") return message;
-  return error.message || "Could not update your profile image.";
+    errorData?.detail
+    ?? errors?.detail
+    ?? fieldError
+    ?? errorData?.error
+    ?? (responseData?.message !== "Error" ? responseData?.message : undefined);
+  if (typeof message === "string" && message !== "Error") return message;
+  return error?.message && error.message !== "Error" ? error.message : fallback;
 }
 
-function ProfileSection({ onAvatarUpdated, requirements = [] }) {
+export default function ProfileSection({ onAvatarUpdated }) {
   const [profile, setProfile] = useState(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [avatarSrc, setAvatarSrc] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [saved, setSaved] = useState("");
+  const [pwSaved, setPwSaved] = useState("");
+  const [error, setError] = useState("");
+  const [pwError, setPwError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
-  const [pendingPreviewUrl, setPendingPreviewUrl] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
-    apiClient.get("me/")
-      .then((res) => {
-        const data = res.data?.data ?? res.data;
-        const currentProfile = Array.isArray(data) ? data[0] ?? null : data;
-        setProfile(currentProfile);
-        setAvatarPreview(currentProfile?.profile_url ?? currentProfile?.profile ?? null);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to sync profile:", err);
-        setLoading(false);
-      });
+    let active = true;
+    function loadProfile() {
+      setLoading(true);
+      fetchCurrentUser()
+        .then((account) => {
+          if (!active) return;
+          setProfile(account);
+          setFirstName(account?.first_name || "");
+          setLastName(account?.last_name || "");
+          setAvatarSrc(profileImage(account));
+        })
+        .catch((loadError) => {
+          if (active) setError(errorMessage(loadError, "Could not load this profile."));
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }
+    loadProfile();
+    const stopRefresh = subscribePortalRefresh(loadProfile);
+    return () => {
+      active = false;
+      stopRefresh();
+    };
   }, []);
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const previewUrl = URL.createObjectURL(file);
-    setPendingAvatarFile(file);
-    setPendingPreviewUrl(previewUrl);
-    setShowModal(true);
-    
-    e.target.value = "";
-  };
-
-  const handleConfirmUpload = async () => {
-    if (!pendingAvatarFile) return;
-
-    setIsUploading(true);
-    setUploadError("");
-
-    try {
-      const profileData = new FormData();
-      profileData.append("profile", pendingAvatarFile);
-      const profileResponse = await apiClient.patch("me/update/", profileData);
-      const updatedProfile = profileResponse.data?.data ?? profileResponse.data;
-      const profileUrl = updatedProfile?.profile_url ?? updatedProfile?.profile;
-      if (typeof profileUrl !== "string" || !profileUrl) {
-        throw new Error("The profile update response did not include a profile image URL.");
-      }
-
-      setProfile((currentProfile) => ({ ...currentProfile, ...updatedProfile }));
-      setAvatarPreview(profileUrl);
-      onAvatarUpdated?.(profileUrl);
-      setPendingAvatarFile(null);
-      if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-      setPendingPreviewUrl(null);
-      setShowModal(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    } catch (error) {
-      console.error("Failed to update profile image:", error);
-      setUploadError(getProfileUpdateErrorMessage(error));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleCancelUpload = () => {
-    setPendingAvatarFile(null);
-    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    setPendingPreviewUrl(null);
-    setUploadError("");
-    setShowModal(false);
-  };
-
-  const handlePasswordChange = async (event) => {
-    event.preventDefault();
-    setPasswordError("");
-    setPasswordMessage("");
-    if (newPassword !== confirmPassword) {
-      setPasswordError("The passwords do not match.");
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPasswordError("Use at least 8 characters.");
-      return;
-    }
-    setSavingPassword(true);
-    try {
-      await apiClient.post("users/change-password/", {
-        current_password: currentPassword,
-        new_password: newPassword,
-        confirm_password: confirmPassword,
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordMessage("Your password has been updated.");
-    } catch (error) {
-      const detail = error.response?.data?.errors?.detail
-        || error.response?.data?.message
-        || error.message
-        || "Could not update the password.";
-      setPasswordError(detail === "Error" ? "Could not update the password." : detail);
-    } finally {
-      setSavingPassword(false);
-    }
-  };
-
-  if (loading) {
-    return <PortalLoading title="Loading your profile" detail="Getting your account and clearance details." />;
-  }
-
-  const initials = profile?.first_name && profile?.last_name
-    ? `${profile.first_name.charAt(0).toUpperCase()}${profile.last_name.charAt(0).toUpperCase()}`
-    : profile?.name 
-      ? profile.name.charAt(0).toUpperCase()
-      : "A";
-
-  const displayName = profile?.first_name || profile?.last_name
-    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
-    : profile?.username || "Student";
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || profile?.username || "Account";
+  const groups = Array.isArray(profile?.groups) ? profile.groups : [];
+  const roleName = groups.length
+    ? String(groups[0]?.name ?? groups[0])
+    : "Student";
   const student = profile?.student ?? {};
-  const profileImage = avatarPreview || profile?.profile_url || profile?.profile;
+  const studentNumber = student.s_studentID || student.student_number || student.student_id || "";
   const programRecord = student.program;
   const academicProgram = student.program_name
     ?? (typeof programRecord === "string" ? programRecord : programRecord?.name)
     ?? student.course
-    ?? "—";
-  const studentNumber = student.s_studentID || student.student_number || student.student_id || "—";
-  const organization = profile?.institute?.institute_name
-    || profile?.institute?.name
-    || profile?.school?.school_name
-    || profile?.school?.name
-    || "—";
+    ?? "";
+  const instituteName = profile?.institute?.institute_name || profile?.institute?.name || "—";
+  const initials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "A";
+
+  function handleAvatarChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file.");
+      return;
+    }
+    setError("");
+    setAvatarFile(file);
+    setAvatarSrc(URL.createObjectURL(file));
+  }
+
+  async function handleSaveProfile(event) {
+    event.preventDefault();
+    setError("");
+    setSaved("");
+    setSaving(true);
+    try {
+      const payload = new FormData();
+      payload.append("first_name", firstName.trim());
+      payload.append("last_name", lastName.trim());
+      if (avatarFile) payload.append("profile", avatarFile);
+      await apiClient.patch("me/update/", payload);
+      const account = await fetchCurrentUser({ fresh: true });
+      const next = { ...account, first_name: firstName.trim(), last_name: lastName.trim() };
+      setProfile(next);
+      setAvatarFile(null);
+      const nextImage = profileImage(next) || avatarSrc;
+      setAvatarSrc(nextImage);
+      publishAccount(next);
+      if (nextImage) onAvatarUpdated?.(nextImage);
+      setSaved("Profile saved.");
+    } catch (saveError) {
+      setError(errorMessage(saveError, "Could not save this profile."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleChangePassword(event) {
+    event.preventDefault();
+    setPwError("");
+    setPwSaved("");
+    if (!currentPw || !newPw || !confirmPw) {
+      setPwError("Please fill in all password fields.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError("New passwords do not match.");
+      return;
+    }
+    if (newPw.length < 8) {
+      setPwError("Password must be at least 8 characters.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.post("users/change-password/", {
+        current_password: currentPw,
+        new_password: newPw,
+        confirm_password: confirmPw,
+      });
+      setPwSaved("Password updated.");
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+    } catch (passwordError) {
+      setPwError(errorMessage(passwordError, "Could not update the password."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <PortalLoading variant="profile" title="Loading your profile" detail="Getting the account details for this sign-in." />;
+  }
 
   return (
-    <div className="profile-grid-layout" style={{ position: "relative" }}>
-      {/* Sliding system alert alert notification modal panel */}
-      <div className={`profile-system-toast-alert-modal ${showToast ? "slide-in" : ""}`}>
-        <div className="toast-alert-icon-check">✓</div>
-        <div className="toast-alert-text-block">
-          <h5>Photo Updated Successfully</h5>
-          <p>Your official institutional student portal profile picture has been re-saved.</p>
-        </div>
+    <div className="profile-page">
+      <div className="profile-page-header">
+        <h1 className="profile-page-title">My Profile</h1>
+        <p className="profile-page-sub">Manage your account information and security settings.</p>
       </div>
 
-      <div className="profile-left-card">
-        <div className="profile-avatar-container-interactive">
-          <label htmlFor="avatar-file-input-selector" className="avatar-uploader-click-wrapper">
-            {profileImage ? (
-              <img src={profileImage} alt="Profile" className="avatar-image-render-circle-fixed" />
-            ) : (
-              <div className="profile-avatar-circle">{initials}</div>
+      {error && <p className="profile-pw-error" role="alert">{error}</p>}
+
+      <div className="profile-grid">
+        <div className="profile-avatar-card">
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar-circle">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="" className="profile-avatar-img" />
+              ) : (
+                <span className="profile-avatar-initials">{initials}</span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="profile-avatar-upload-btn"
+              onClick={() => fileRef.current?.click()}
+              title="Upload photo"
+            >
+              <Camera size={15} />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarChange}
+            />
+          </div>
+          <h3 className="profile-avatar-name">{displayName}</h3>
+          <p className="profile-avatar-email">{profile?.email || "No email on this account"}</p>
+          <span className="profile-avatar-role-badge">
+            <Shield size={11} />
+            {roleName}
+          </span>
+          <p className="profile-avatar-hint">
+            Choose a photo, then save. The image is stored with your account.
+          </p>
+        </div>
+
+        <div className="profile-main-col">
+          <form className="profile-info-card" onSubmit={handleSaveProfile}>
+            <div className="profile-card-header">
+              <User size={16} className="profile-card-icon" />
+              <h2 className="profile-card-title">Personal Information</h2>
+            </div>
+
+            <div className="profile-form-row">
+              <div className="profile-form-field">
+                <label htmlFor="account-first-name">First name</label>
+                <input
+                  id="account-first-name"
+                  type="text"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  className="profile-input"
+                  required
+                />
+              </div>
+              <div className="profile-form-field">
+                <label htmlFor="account-last-name">Last name</label>
+                <input
+                  id="account-last-name"
+                  type="text"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  className="profile-input"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="profile-form-row">
+              <div className="profile-form-field">
+                <label htmlFor="account-email">Email address</label>
+                <div className="profile-input-icon-wrap">
+                  <Mail size={14} className="profile-input-icon" />
+                  <input
+                    id="account-email"
+                    type="email"
+                    value={profile?.email || ""}
+                    readOnly
+                    className="profile-input with-icon readonly"
+                  />
+                </div>
+              </div>
+              <div className="profile-form-field">
+                <label htmlFor="account-username">Username</label>
+                <input
+                  id="account-username"
+                  type="text"
+                  value={profile?.username || ""}
+                  readOnly
+                  className="profile-input readonly"
+                />
+              </div>
+            </div>
+
+            <div className="profile-form-row">
+              <div className="profile-form-field">
+                <label htmlFor="account-role">Role</label>
+                <input id="account-role" type="text" value={roleName} readOnly className="profile-input readonly" />
+              </div>
+              <div className="profile-form-field">
+                <label htmlFor="account-institute">Institute</label>
+                <input id="account-institute" type="text" value={instituteName} readOnly className="profile-input readonly" />
+              </div>
+            </div>
+
+            {(studentNumber || academicProgram) && (
+              <div className="profile-form-row">
+                <div className="profile-form-field">
+                  <label htmlFor="account-student-number">Student number</label>
+                  <input id="account-student-number" type="text" value={studentNumber || "—"} readOnly className="profile-input readonly" />
+                </div>
+                <div className="profile-form-field">
+                  <label htmlFor="account-program">Program</label>
+                  <input id="account-program" type="text" value={academicProgram || "—"} readOnly className="profile-input readonly" />
+                </div>
+              </div>
             )}
-            <div className="avatar-mini-upload-badge">
-              <svg 
-                xmlns="http://w3.org" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="#3a3c30" 
-                strokeWidth="2.5" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                style={{ width: "14px", height: "14px" }}
-              >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-            </div>
-          </label>
-          <input 
-            type="file" 
-            id="avatar-file-input-selector" 
-            className="hidden-file-input-completely" 
-            accept="image/png, image/jpeg, image/jpg"
-            onChange={handleImageSelect}
-          />
-        </div>
-        
-        <h3 className="profile-name">{displayName}</h3>
-        <p className="profile-id-number">{studentNumber}</p>
-        <span className="profile-status-badge">{profile?.groups?.join(", ") || "STUDENT"}</span>
-      </div>
 
-      <div className="profile-right-container">
-        <div className="profile-inner-capsule">
-          <h3 className="capsule-title">Account Details</h3>
-          <div className="info-item-block">
-            <span className="info-label">Email Address</span>
-            <span className="info-value">{profile?.email || "—"}</span>
-          </div>
-          <div className="info-item-block">
-            <span className="info-label">Login Username</span>
-            <span className="info-value">{profile?.username || "—"}</span>
-          </div>
-          <div className="info-item-block">
-            <span className="info-label">System Role Group</span>
-            <span className="info-value">{profile?.groups?.join(", ") || "Students"}</span>
-          </div>
-        </div>
-
-        <div className="profile-inner-capsule">
-          <h3 className="capsule-title">Institutional Scope</h3>
-          <div className="info-item-block">
-            <span className="info-label">Academic Program</span>
-            <span className="info-value">{typeof academicProgram === "string" ? academicProgram : "—"}</span>
-          </div>
-          <div className="info-item-block">
-            <span className="info-label">Organizational Scope</span>
-            <span className="info-value">{organization}</span>
-          </div>
-          <div className="info-item-block">
-            <span className="info-label">Assigned Requirements</span>
-            <span className="info-value">{requirements.length} Requirements</span>
-          </div>
-        </div>
-
-        <form className="profile-inner-capsule" onSubmit={handlePasswordChange}>
-          <h3 className="capsule-title">Change Password</h3>
-          <label className="password-field">
-            <span className="info-label">Current password</span>
-            <PasswordInput autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
-          </label>
-          <label className="password-field">
-            <span className="info-label">New password</span>
-            <PasswordInput autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
-          </label>
-          <label className="password-field">
-            <span className="info-label">Confirm new password</span>
-            <PasswordInput autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
-          </label>
-          {passwordError && <p className="password-feedback error" role="alert">{passwordError}</p>}
-          {passwordMessage && <p className="password-feedback success" role="status">{passwordMessage}</p>}
-          <button type="submit" className="submit-request-form-btn-aligned" disabled={savingPassword}>
-            {savingPassword ? "Updating..." : "Update Password"}
-          </button>
-        </form>
-      </div>
-
-      {showModal && (
-        <div className="profile-avatar-modal-overlay">
-          <div className="profile-avatar-modal-card-box">
-            <h4>Confirm Profile Picture</h4>
-            <p>Would you like to set this image as your official institutional profile picture?</p>
-            
-            <div className="profile-avatar-modal-preview-zone">
-              <img src={pendingPreviewUrl} alt="Pending Preview" className="profile-avatar-modal-image-element" />
-            </div>
-
-            <div className="profile-avatar-modal-actions-row">
-              {uploadError && <p className="login-message" role="alert">{uploadError}</p>}
-              <button type="button" className="submit-request-form-btn-cancel" onClick={handleCancelUpload} disabled={isUploading}>
-                Cancel
-              </button>
-              <button type="button" className="submit-request-form-btn-aligned" onClick={handleConfirmUpload} disabled={isUploading}>
-                {isUploading ? "Saving..." : "Confirm Picture"}
+            <div className="profile-form-actions">
+              {saved && <span className="profile-save-success">{saved}</span>}
+              <button type="submit" className="profile-save-btn" disabled={saving}>
+                <Save size={14} />
+                Save Changes
               </button>
             </div>
-          </div>
+          </form>
+
+          <form className="profile-info-card" onSubmit={handleChangePassword}>
+            <div className="profile-card-header">
+              <Lock size={16} className="profile-card-icon" />
+              <h2 className="profile-card-title">Change Password</h2>
+            </div>
+
+            <div className="profile-form-row single">
+              <div className="profile-form-field">
+                <label htmlFor="account-current-password">Current Password</label>
+                <PasswordInput
+                  id="account-current-password"
+                  value={currentPw}
+                  onChange={(event) => setCurrentPw(event.target.value)}
+                  className="profile-input"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            <div className="profile-form-row">
+              <div className="profile-form-field">
+                <label htmlFor="account-new-password">New Password</label>
+                <PasswordInput
+                  id="account-new-password"
+                  value={newPw}
+                  onChange={(event) => setNewPw(event.target.value)}
+                  className="profile-input"
+                  autoComplete="new-password"
+                  minLength={8}
+                />
+              </div>
+              <div className="profile-form-field">
+                <label htmlFor="account-confirm-password">Confirm New Password</label>
+                <PasswordInput
+                  id="account-confirm-password"
+                  value={confirmPw}
+                  onChange={(event) => setConfirmPw(event.target.value)}
+                  className="profile-input"
+                  autoComplete="new-password"
+                  minLength={8}
+                />
+              </div>
+            </div>
+
+            {pwError && <p className="profile-pw-error" role="alert">{pwError}</p>}
+
+            <div className="profile-form-actions">
+              {pwSaved && <span className="profile-save-success">{pwSaved}</span>}
+              <button type="submit" className="profile-save-btn" disabled={saving}>
+                <Lock size={14} />
+                Update Password
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
     </div>
   );
 }
-
-export default ProfileSection;
