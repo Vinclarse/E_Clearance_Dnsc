@@ -911,8 +911,8 @@ function HomePage() {
             <p>A Web-Based Student Clearance Management System</p>
           </div>
           <div className="footer-project">
-            <strong>Student Project</strong>
-            <p>This website uses mock data for demonstration and academic purposes.</p>
+            <strong>Institute of Computing</strong>
+            <p>Digital Student Clearance, Signatory Review, and QR Verification Platform.</p>
             <p>© {new Date().getFullYear()} ClearanceDNSC</p>
           </div>
         </div>
@@ -936,8 +936,8 @@ function App() {
     () => window.location.pathname.replace(/\/+$/, '') || '/',
   )
   const isLoginPage = currentPath === '/login'
-  const isForgotPasswordPage = currentPath === '/forgot-password'
-  const isDashboardPage = currentPath === '/dashboard'
+  const isForgotPasswordPage = currentPath === '/forgot-password' || currentPath === '/password-reset'
+  const isDashboardPage = currentPath === '/dashboard' || currentPath === '/student' || currentPath.startsWith('/student/')
   const isAdminPage = currentPath === '/admin' || currentPath.startsWith('/admin/')
   const isSignatoryPage = currentPath === '/signatory' || currentPath.startsWith('/signatory/')
   const hasAuthToken = Boolean(localStorage.getItem('auth_token'))
@@ -1085,9 +1085,11 @@ function App() {
     if (isDesignPreview && !hasAuthToken) return <StudentDashboard />
     return hasAuthToken && accountKind === 'student' ? <StudentDashboard /> : null
   }
-  if (isForgotPasswordPage) return <ForgotPasswordPage />
+  if (isForgotPasswordPage) return <div key="forgot-password" className="page-fade-in"><ForgotPasswordPage /></div>
   if (isLoginPage && hasAuthToken) return null
-  return isLoginPage ? <LoginPage /> : <HomePage />
+  return isLoginPage
+    ? <div key="login" className="page-fade-in"><LoginPage /></div>
+    : <div key="home" className="page-fade-in"><HomePage /></div>
 }
 
 export default App

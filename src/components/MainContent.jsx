@@ -20,7 +20,15 @@ function getClearedAtLabel(clearedAt) {
     : `Cleared ${date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
 }
 
-function MainContent({ requirements, onUploadProof }) {
+function proofHref(item) {
+  const raw = item?.proof_attachment_url || item?.proof_attachment;
+  if (typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return "";
+  return trimmed.replace(/^http:\/\/res\.cloudinary\.com\//i, "https://res.cloudinary.com/");
+}
+
+function MainContent({ requirements, onUploadProof, onRemoveProof }) {
   const orderedRequirements = requirements
     .map((item, index) => ({ item, index }))
     .sort((a, b) => (
@@ -85,8 +93,38 @@ function MainContent({ requirements, onUploadProof }) {
                   </div>
                   <div className="requirement-meta">
                     <span>{item.authorizing_role_name || `Step ${stepNumber}`}</span>
-                    {(item.proof_attachment || item.proof_uploaded_at) && !isCleared && (
-                      <span>Proof submitted</span>
+                    {(item.proof_attachment || item.proof_attachment_url || item.proof_uploaded_at) && !isCleared && (
+                      <>
+                        <span>Proof submitted</span>
+                        {proofHref(item) && (
+                          <a
+                            href={proofHref(item)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: "#2E3D28", fontWeight: 700, textDecoration: "underline" }}
+                          >
+                            View proof
+                          </a>
+                        )}
+                        {onRemoveProof && (
+                          <button
+                            type="button"
+                            onClick={() => onRemoveProof(item)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              color: "#AA5757",
+                              fontWeight: 700,
+                              fontSize: "inherit",
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Remove proof
+                          </button>
+                        )}
+                      </>
                     )}
                     {clearedAt && <span>{clearedAt}</span>}
                     {isLocked && (

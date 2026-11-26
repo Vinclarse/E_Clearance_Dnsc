@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import ProofPreview from './ProofPreview.jsx';
+import { fetchClearanceItem } from './signatoryApi.js';
 import { termFromRecords } from '../services/clearanceDisplay.js';
 
 export default function SIG3({ students, onUpdateStudent }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [inspectingStudent, setInspectingStudent] = useState(null);
+  const [proofLoading, setProofLoading] = useState(false);
+  const [proofFailed, setProofFailed] = useState(false);
+  const [proofError, setProofError] = useState('');
+  const [submittingProof, setSubmittingProof] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
   const [selectedYear, setSelectedYear] = useState('All years');
@@ -30,10 +35,60 @@ export default function SIG3({ students, onUpdateStudent }) {
     setExpandedColumns((current) => ({ ...current, [column]: !current[column] }));
   };
 
-  const approveInspected = () => {
-    if (!inspectingStudent || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false) return;
-    onUpdateStudent(inspectingStudent.id, { status: 'Cleared' });
-    setInspectingStudent(null);
+  const openProof = (item) => {
+    setInspectingStudent(item);
+    setProofFailed(false);
+    setProofError('');
+    if (item.proofUrl || !item.itemId) {
+      setProofLoading(false);
+      return;
+    }
+    setProofLoading(true);
+    fetchClearanceItem(item.itemId)
+      .then((detail) => {
+        setInspectingStudent((current) => (
+          current && current.id === item.id
+            ? {
+                ...current,
+                proofUrl: detail.proofUrl,
+                proof: detail.proof || current.proof,
+                proofNotes: current.proofNotes || detail.proofNotes,
+                proofDetails: current.proofDetails || detail.proofDetails,
+                note: current.note || detail.note,
+              }
+            : current
+        ));
+      })
+      .catch(() => setProofError('The proof file could not be loaded.'))
+      .finally(() => setProofLoading(false));
+  };
+
+  const approveInspected = async () => {
+    if (!inspectingStudent || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false || submittingProof) return false;
+    setSubmittingProof(true);
+    try {
+      const ok = await onUpdateStudent(inspectingStudent.id, { status: 'Cleared' });
+      if (ok !== false) setInspectingStudent(null);
+      return ok;
+    } finally {
+      setSubmittingProof(false);
+    }
+  };
+
+  const rejectInspected = async (reason) => {
+    if (!inspectingStudent || inspectingStudent.status === 'Cleared' || submittingProof) return false;
+    setSubmittingProof(true);
+    try {
+      const ok = await onUpdateStudent(inspectingStudent.id, {
+        status: 'Deficiency',
+        note: reason,
+        rejectProof: true,
+      });
+      if (ok !== false) setInspectingStudent(null);
+      return ok;
+    } finally {
+      setSubmittingProof(false);
+    }
   };
 
   return (
@@ -164,7 +219,7 @@ export default function SIG3({ students, onUpdateStudent }) {
                 <span style={{ fontSize: '0.68rem', color: '#74806E' }}>Proof submitted for review</span>
                 <button
                   type="button"
-                  onClick={() => setInspectingStudent(item)}
+                  onClick={() => openProof(item)}
                   style={{ backgroundColor: '#2E3D28', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                   Inspect Proof
@@ -226,9 +281,16 @@ export default function SIG3({ students, onUpdateStudent }) {
       </div>
 
       <ProofPreview
+        key={inspectingStudent?.id ?? 'none'}
         student={inspectingStudent}
+        loading={proofLoading}
+        error={proofError}
+        failed={proofFailed}
+        submitting={submittingProof}
+        onImageError={() => setProofFailed(true)}
         onClose={() => setInspectingStudent(null)}
         onApprove={approveInspected}
+        onReject={rejectInspected}
         approveDisabled={!inspectingStudent || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false}
       />
 

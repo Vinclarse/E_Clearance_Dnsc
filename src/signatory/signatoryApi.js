@@ -16,9 +16,10 @@ async function enrichClearanceTerm(clearance, cache) {
   let semester = textValue(clearance?.semester) || textValue(nested.semester);
   let academicYear = textValue(clearance?.academic_year) || textValue(nested.academic_year);
   let typeName = textValue(clearance?.clearance_type_name) || textValue(nested.name);
+  let typeIsActive = nested.is_active ?? clearance?.clearance_type_is_active ?? null;
   const typeId = clearance?.clearance_type_id || nested.id;
 
-  if ((!semester || !academicYear || !typeName) && typeId) {
+  if ((!semester || !academicYear || !typeName || typeIsActive == null) && typeId) {
     if (!cache.has(String(typeId))) {
       cache.set(String(typeId), apiClient.get(`clearance-types/${typeId}/`)
         .then((response) => unwrapEnvelope(response))
@@ -28,10 +29,15 @@ async function enrichClearanceTerm(clearance, cache) {
     semester = semester || textValue(type?.semester);
     academicYear = academicYear || textValue(type?.academic_year);
     typeName = typeName || textValue(type?.name);
+    if (typeIsActive == null && type && typeof type.is_active === "boolean") {
+      typeIsActive = type.is_active;
+    }
   }
 
   return {
     ...clearance,
+    clearance_type_id: typeId ?? null,
+    clearance_type_is_active: typeIsActive,
     semester,
     academic_year: academicYear,
     clearance_type_name: typeName,
@@ -66,6 +72,7 @@ const STATUS_LABEL = {
   completed: "Cleared",
   has_issue: "Deficiency",
   deficiency: "Deficiency",
+  under_review: "Under Review",
   pending: "Pending",
   in_progress: "Pending",
 };
@@ -107,11 +114,8 @@ function orderedItems(record) {
 
 function stepsFrom(record) {
   const nested = orderedItems(record);
-  return Array.from({ length: 6 }, (_, index) => {
-    const match = nested.find((item) => Number(item.order_sequence) === index + 1);
-    if (!match) return false;
-    return String(match.status ?? "").toLowerCase() === "cleared";
-  });
+  if (nested.length === 0) return [];
+  return nested.map((item) => String(item.status ?? "").toLowerCase() === "cleared");
 }
 
 function proofState(record, status) {
@@ -119,21 +123,55 @@ function proofState(record, status) {
   const proof = Boolean(proofUrl || record?.proof_uploaded_at);
   const proofStatus = status === "Cleared"
     ? (proof ? "resolved" : null)
-    : proof
+    : status === "Under Review"
       ? "submitted"
       : status === "Deficiency"
         ? "pending"
-        : null;
+        : proof
+          ? "submitted"
+          : null;
   return { proofUrl, proof, proofStatus };
+}
+
+function blockingStepFrom(item, clearance) {
+  const order = Number(item?.order_sequence) || 0;
+  if (!order) return "";
+  const blocker = orderedItems(clearance).find(
+    (entry) => Number(entry.order_sequence) < order && String(entry.status ?? "").toLowerCase() !== "cleared",
+  );
+  if (!blocker) return "";
+  const name = asText(blocker.requirement_name || blocker.authorizing_role_name);
+  return name ? `Step ${blocker.order_sequence}: ${name}` : `Step ${blocker.order_sequence}`;
+}
+
+function clearanceCycleMeta(clearance, item) {
+  const typeId = clearance?.clearance_type_id ?? clearance?.clearance_type?.id ?? item?.clearance_type_id ?? null;
+  const typeName = textValue(clearance?.clearance_type_name || item?.clearance_type_name);
+  const academicYear = textValue(clearance?.academic_year || item?.academic_year);
+  const semester = textValue(clearance?.semester || item?.semester);
+  const overall = String(clearance?.overall_status ?? clearance?.status ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+  const typeIsActive = clearance?.clearance_type_is_active ?? null;
+  const cycleKey = String(typeId ?? ([typeName, academicYear, semester].filter(Boolean).join("|") || "default"));
+  const cycleLabel = [typeName || "Semestral Clearance", academicYear, semester].filter(Boolean).join(" · ");
+  return {
+    clearanceTypeId: typeId,
+    clearanceTypeIsActive: typeIsActive,
+    clearanceOverallStatus: overall,
+    clearanceCycleKey: cycleKey,
+    clearanceCycleLabel: cycleLabel,
+  };
 }
 
 function mapQueueItem(item, clearance) {
   const status = labelStatus(item.status);
   const proof = proofState(item, status);
+  const blockingOffice = item.is_actionable === false ? blockingStepFrom(item, clearance) : "";
+  const cycle = clearanceCycleMeta(clearance, item);
   return {
     id: String(item.id),
     itemId: item.id,
     clearanceId: item.student_clearance_id ?? clearance?.id ?? null,
+    ...cycle,
     name: asText(clearance?.student_name || item.student_name, "Student"),
     studentNumber: asText(clearance?.student_number || item.student_number),
     program: asText(clearance?.program || item.program),
@@ -145,9 +183,12 @@ function mapQueueItem(item, clearance) {
     orderSequence: Number(item.order_sequence) || 0,
     req: asText(item.requirement_name || item.authorizing_role_name, "Signatory"),
     isActionable: item.is_actionable !== false,
+    blockingOffice,
     status,
     fee: money(item.amount_due),
+    amountDue: item.amount_due != null ? String(item.amount_due) : "",
     proofDetails: asText(item.proof_notes || item.remarks),
+    proofNotes: asText(item.proof_notes),
     proof: proof.proof,
     proofUrl: proof.proofUrl,
     note: asText(item.remarks),
@@ -161,10 +202,12 @@ function mapCohort(clearance) {
   const items = orderedItems(clearance);
   const hasIssue = items.some((entry) => String(entry.status ?? "").toLowerCase() === "has_issue");
   const allCleared = items.length > 0 && items.every((entry) => String(entry.status ?? "").toLowerCase() === "cleared");
+  const cycle = clearanceCycleMeta(clearance);
   return {
     id: String(clearance.id),
     itemId: null,
     clearanceId: clearance.id,
+    ...cycle,
     name: asText(clearance?.student_name, "Student"),
     studentNumber: asText(clearance?.student_number),
     program: asText(clearance?.program),
@@ -199,12 +242,12 @@ function isMetrics(value) {
   );
 }
 
-function metricsFromQueue(queue) {
+export function metricsFromQueue(queue) {
   return {
     totalAssigned: queue.length,
     pending: queue.filter((row) => row.status === "Pending").length,
     deficiency: queue.filter((row) => row.status === "Deficiency").length,
-    underReview: queue.filter((row) => row.proof && row.status === "Pending").length,
+    underReview: queue.filter((row) => row.status === "Under Review" || (row.proof && row.status === "Pending")).length,
     cleared: queue.filter((row) => row.status === "Cleared").length,
   };
 }
@@ -347,6 +390,28 @@ export async function markAllNotificationsRead() {
   await apiClient.post("notifications/mark-all-read/", {});
 }
 
+export function signatoryErrorMessage(error, fallback = "The clearance record could not be updated.") {
+  const data = error?.response?.data;
+  const errors = data?.errors;
+  if (typeof data?.detail === "string" && data.detail.trim()) return data.detail;
+  if (typeof errors?.detail === "string" && errors.detail.trim()) return errors.detail;
+  if (typeof data?.blocked_by === "string" && data.blocked_by.trim()) {
+    const step = data.blocking_step ? ` (Step ${data.blocking_step})` : "";
+    return `Sequential clearance locked: '${data.blocked_by}'${step} must be cleared first.`;
+  }
+  if (errors && typeof errors === "object") {
+    const text = Object.values(errors)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value) => typeof value === "string" && value.trim())
+      .join(" ");
+    if (text) return text;
+  }
+  if (typeof data?.message === "string" && data.message.trim() && data.message !== "Error") {
+    return data.message;
+  }
+  return error?.message || fallback;
+}
+
 export async function applySignatoryUpdate(student, updates) {
   if (updates.validated === true) {
     const complete = Array.isArray(student.steps) && student.steps.length > 0 && student.steps.every(Boolean);
@@ -361,9 +426,11 @@ export async function applySignatoryUpdate(student, updates) {
   if (updates.status === "Cleared") body.status = "cleared";
   if (updates.status === "Deficiency") body.status = "has_issue";
   if (updates.status === "Pending") body.status = "pending";
-  if (typeof updates.note === "string" && updates.note) body.remarks = updates.note;
-  if (typeof updates.proofDetails === "string" && updates.proofDetails) body.proof_notes = updates.proofDetails;
-  if (updates.amountDue != null && updates.amountDue !== "") body.amount_due = updates.amountDue;
+  if (typeof updates.note === "string" && updates.note.trim()) body.remarks = updates.note.trim();
+  if (typeof updates.proofDetails === "string" && updates.proofDetails.trim()) body.proof_notes = updates.proofDetails.trim();
+  if (updates.amountDue !== undefined) {
+    body.amount_due = updates.amountDue === "" || updates.amountDue === null ? null : String(updates.amountDue);
+  }
   if (Object.keys(body).length === 0) return;
   await apiClient.patch(`student-clearance-items/${student.itemId}/`, body);
 }

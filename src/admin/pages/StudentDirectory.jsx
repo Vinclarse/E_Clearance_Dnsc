@@ -180,7 +180,7 @@ export default function StudentDirectory() {
   if (loading && rows.length === 0 && !error) {
     return (
       <PortalLoading
-        variant="table"
+        variant="students"
         title="Loading the student directory"
         detail="Getting programs, year levels, and the current roster."
       />

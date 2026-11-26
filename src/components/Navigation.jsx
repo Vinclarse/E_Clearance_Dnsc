@@ -129,7 +129,16 @@ function Navigation({
               className={activeTab === "track" ? "active-link" : ""} 
               onClick={(e) => handleTabClick(e, "track")}
             >
-              Clearance Tracker
+              Tracker
+            </a>
+          </li>
+          <li>
+            <a 
+              href="#" 
+              className={activeTab === "history" ? "active-link" : ""} 
+              onClick={(e) => handleTabClick(e, "history")}
+            >
+              History
             </a>
           </li>
           <li>
@@ -138,7 +147,7 @@ function Navigation({
               className={activeTab === "download" ? "active-link" : ""} 
               onClick={(e) => handleTabClick(e, "download")}
             >
-              Download / Print Clearance
+              Clearance
             </a>
           </li>
         </ul>

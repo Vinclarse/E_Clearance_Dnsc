@@ -562,6 +562,118 @@
   color: #8a2a2a;
 }
 
+.ct-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ct-btn-new-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-navbar);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.ct-btn-new-template:hover:not(:disabled) {
+  opacity: 0.92;
+}
+.ct-btn-new-template:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ct-step-remove-btn {
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #8a2a2a;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ct-step-remove-btn:hover:not(:disabled) {
+  background: #fff5f5;
+  border-color: #d8a5a5;
+}
+
+.ct-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 26, 15, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.ct-modal-card {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 22px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+}
+
+.ct-modal-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ct-modal-sub {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.ct-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ct-modal-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ct-modal-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.ct-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 @media (max-width: 900px) {
   .ct-page {
     padding: 16px 12px 32px;

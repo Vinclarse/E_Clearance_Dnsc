@@ -116,6 +116,11 @@ export async function fetchAuditReport(params) {
   return unwrapEnvelope(response);
 }
 
+export async function createClearanceType(payload) {
+  const response = await apiClient.post("clearance-types/", payload);
+  return unwrapEnvelope(response);
+}
+
 export async function updateClearanceType(id, payload) {
   const response = await apiClient.patch(`clearance-types/${id}/`, payload);
   return unwrapEnvelope(response);
@@ -124,6 +129,19 @@ export async function updateClearanceType(id, payload) {
 export async function issueClearanceType(id) {
   const response = await apiClient.post(`clearance-types/${id}/issue/`, {});
   return unwrapEnvelope(response);
+}
+
+export function fetchClearanceRoles() {
+  return fetchAllPages("clearance-roles/");
+}
+
+export async function createClearanceRequirement(payload) {
+  const response = await apiClient.post("clearance-requirements/", payload);
+  return unwrapEnvelope(response);
+}
+
+export async function deleteClearanceRequirement(id) {
+  await apiClient.delete(`clearance-requirements/${id}/`);
 }
 
 export async function fetchItemTotal(params) {

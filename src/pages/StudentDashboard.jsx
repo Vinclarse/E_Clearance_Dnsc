@@ -7,6 +7,7 @@ import MainContent from "../components/MainContent";
 import ProfileSection from "../components/ProfileSection";
 import ClearanceRequest from "../components/ClearanceRequest";
 import ClearanceTracker from "../components/ClearanceTracker";
+import ClearanceHistory from "../components/ClearanceHistory";
 import DownloadClearance from "../components/DownloadClearance";
 import apiClient from "../services/api";
 import PortalLoading from "../components/PortalLoading.jsx";
@@ -48,6 +49,7 @@ async function withClearanceTerm(clearance) {
     semester,
     academic_year: academicYear,
     clearance_type_name: typeName,
+    clearance_type_is_active: nested.is_active ?? clearance?.clearance_type_is_active ?? null,
   };
 }
 
@@ -173,19 +175,47 @@ const previewClearance = {
   clearance_type_name: "Student Clearance",
 };
 
+function initialStudentTab() {
+  const path = window.location.pathname.replace(/\/+$/, "").toLowerCase();
+  if (path === "/student/request") return "request";
+  if (path === "/student/tracker" || path === "/student/track") return "track";
+  if (path === "/student/history") return "history";
+  if (path === "/student/download" || path === "/student/certificate") return "download";
+  if (path === "/student/profile") return "profile";
+  return "dashboard";
+}
+
+function isPastStudentClearance(clearance) {
+  const status = String(clearance?.overall_status ?? clearance?.status ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+  return status === "completed" || status === "cleared" || status === "rejected" || clearance?.clearance_type_is_active === false;
+}
+
+function formatClearanceOptionLabel(clearance) {
+  const title = clearance?.clearance_type_name || "Semestral Clearance";
+  const term = [clearance?.academic_year, clearance?.semester].filter(Boolean).join(" · ");
+  const tag = isPastStudentClearance(clearance) ? "Past" : "Active";
+  return term ? `${title} (${term}) — ${tag}` : `${title} — ${tag}`;
+}
+
 function StudentDashboard() {
   const isDesignPreview = new URLSearchParams(window.location.search).get("preview") === "true";
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [currentTab, setCurrentTab] = useState("dashboard");
+  const [currentTab, setCurrentTab] = useState(initialStudentTab);
+  const [clearanceScope, setClearanceScope] = useState("all");
   const [profile, setProfile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [customNotification, setCustomNotification] = useState(null);
   const [requirements, setRequirements] = useState(() => isDesignPreview ? previewRequirements : []);
-  const [clearanceRecord, setClearanceRecord] = useState(() => isDesignPreview ? previewClearance : null);
+  const [allClearances, setAllClearances] = useState(() => isDesignPreview ? [{ id: "preview-clearance", ...previewClearance }] : []);
+  const [clearanceRecord, setClearanceRecord] = useState(() => isDesignPreview ? { id: "preview-clearance", ...previewClearance } : null);
+  const [selectedClearanceId, setSelectedClearanceId] = useState(null);
   const [clearanceError, setClearanceError] = useState("");
   const [loadingClearance, setLoadingClearance] = useState(!isDesignPreview);
   const [reloadKey, setReloadKey] = useState(0);
   const [requestItemId, setRequestItemId] = useState(null);
+  const [removingProofItem, setRemovingProofItem] = useState(null);
+  const [isRemovingProof, setIsRemovingProof] = useState(false);
+  const [removeProofError, setRemoveProofError] = useState("");
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -229,7 +259,16 @@ function StudentDashboard() {
     apiClient.get("student-clearances/my-clearances/")
       .then(async (res) => {
         if (!isMounted) return;
-        const clearance = selectClearance(extractCollection(res.data).items);
+        const rawClearances = extractCollection(res.data).items.filter(isClearanceRecord);
+        const termedClearances = await Promise.all(rawClearances.map((entry) => withClearanceTerm(entry)));
+        if (!isMounted) return;
+
+        setAllClearances(termedClearances);
+        const matched = selectedClearanceId != null
+          ? termedClearances.find((entry) => String(entry.id) === String(selectedClearanceId))
+          : null;
+        const clearance = matched || selectClearance(termedClearances);
+
         if (!clearance) {
           setClearanceRecord(null);
           setRequirements([]);
@@ -240,12 +279,11 @@ function StudentDashboard() {
         const extractedItems = embeddedItems.length > 0
           ? embeddedItems
           : await fetchClearanceItems(clearance.id);
-        const termed = await withClearanceTerm(clearance);
         if (!isMounted) return;
         setClearanceRecord({
-          ...termed,
-          status: termed.status ?? termed.overall_status,
-          overall_status: termed.overall_status ?? termed.status,
+          ...clearance,
+          status: clearance.status ?? clearance.overall_status,
+          overall_status: clearance.overall_status ?? clearance.status,
         });
         setRequirements(
           extractedItems
@@ -272,7 +310,7 @@ function StudentDashboard() {
     return () => {
       isMounted = false;
     };
-  }, [isDesignPreview, reloadKey]);
+  }, [isDesignPreview, reloadKey, selectedClearanceId]);
 
   const handleAvatarStateChange = (newUrl) => {
     setAvatarPreview(newUrl);
@@ -320,6 +358,46 @@ function StudentDashboard() {
     setRequestItemId(itemId);
     setCurrentTab("request");
   };
+  const openRemoveProofModal = (item) => {
+    setRemovingProofItem(item);
+    setRemoveProofError("");
+  };
+  const closeRemoveProofModal = () => {
+    if (isRemovingProof) return;
+    setRemovingProofItem(null);
+    setRemoveProofError("");
+  };
+  const confirmRemoveProof = async () => {
+    if (!removingProofItem || isRemovingProof) return;
+    setIsRemovingProof(true);
+    setRemoveProofError("");
+    try {
+      await apiClient.delete(`student-clearance-items/${removingProofItem.id}/remove-proof/`);
+      const officeName = removingProofItem.requirement_name || "your requirement";
+      setCustomNotification({
+        id: `remove-proof-${Date.now()}`,
+        text: `Your submitted settlement proof for ${officeName} was removed.`,
+        type: "info",
+        time: "Just now",
+      });
+      setRemovingProofItem(null);
+      setLoadingClearance(true);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      const data = error?.response?.data;
+      const msg = data?.detail || data?.errors?.detail || (data?.message !== "Error" ? data?.message : "");
+      setRemoveProofError(typeof msg === "string" && msg.trim() ? msg : "Could not remove the submitted proof. Please try again.");
+    } finally {
+      setIsRemovingProof(false);
+    }
+  };
+  const handleSelectClearanceFromHistory = (record, targetTab = "dashboard") => {
+    if (record?.id != null && String(record.id) !== String(clearanceRecord?.id)) {
+      setLoadingClearance(true);
+      setSelectedClearanceId(record.id);
+    }
+    setCurrentTab(targetTab);
+  };
   const clearRequestedItem = useCallback(() => setRequestItemId(null), []);
   const retryClearanceLoad = () => {
     setLoadingClearance(true);
@@ -335,6 +413,25 @@ function StudentDashboard() {
     : displayName.charAt(0).toUpperCase() || "S";
 
   const overallStatus = calculateOverallStatus();
+  const scopedClearances = allClearances.filter((entry) => {
+    if (clearanceScope === "active") return !isPastStudentClearance(entry);
+    if (clearanceScope === "past") return isPastStudentClearance(entry);
+    return true;
+  });
+  const showTermSwitcher = allClearances.length > 1 && ["dashboard", "request", "track", "download", "clearance"].includes(currentTab);
+
+  const handleScopeChange = (nextScope) => {
+    setClearanceScope(nextScope);
+    const matching = allClearances.filter((entry) => {
+      if (nextScope === "active") return !isPastStudentClearance(entry);
+      if (nextScope === "past") return isPastStudentClearance(entry);
+      return true;
+    });
+    if (matching.length > 0 && !matching.some((entry) => String(entry.id) === String(clearanceRecord?.id))) {
+      setLoadingClearance(true);
+      setSelectedClearanceId(matching[0].id);
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -367,6 +464,81 @@ function StudentDashboard() {
       )}
 
       <main className="dashboard-content">
+        {showTermSwitcher && !loadingClearance && !clearanceError && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E2E4D8",
+              borderRadius: "16px",
+              padding: "10px 14px",
+              marginBottom: "14px",
+            }}
+          >
+            <div role="group" aria-label="Filter clearance cycle" style={{ display: "inline-flex", gap: "4px", backgroundColor: "#F3F5EE", padding: "3px", borderRadius: "10px" }}>
+              {[
+                { id: "all", label: `All (${allClearances.length})` },
+                { id: "active", label: `Active (${allClearances.filter((entry) => !isPastStudentClearance(entry)).length})` },
+                { id: "past", label: `Past (${allClearances.filter((entry) => isPastStudentClearance(entry)).length})` },
+              ].map((option) => {
+                const activeOption = clearanceScope === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={activeOption}
+                    onClick={() => handleScopeChange(option.id)}
+                    style={{
+                      border: "none",
+                      backgroundColor: activeOption ? "#2E3D28" : "transparent",
+                      color: activeOption ? "#FFFFFF" : "#4E5648",
+                      padding: "5px 10px",
+                      borderRadius: "7px",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", fontWeight: 700, color: "#4E5648" }}>
+              <span>Clearance:</span>
+              <select
+                aria-label="Select clearance term"
+                value={clearanceRecord?.id ?? ""}
+                onChange={(event) => {
+                  const chosenId = event.target.value;
+                  if (chosenId && String(chosenId) !== String(clearanceRecord?.id)) {
+                    setLoadingClearance(true);
+                    setSelectedClearanceId(chosenId);
+                  }
+                }}
+                style={{
+                  border: "1px solid #CFD6C5",
+                  backgroundColor: "#F7F8F3",
+                  color: "#2c2d27",
+                  borderRadius: "8px",
+                  padding: "6px 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                }}
+              >
+                {(scopedClearances.length > 0 ? scopedClearances : allClearances).map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {formatClearanceOptionLabel(entry)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         {isDesignPreview && currentTab === "dashboard" && (
           <div className="dashboard-preview-notice" role="status">
             Design preview — sample data, not live clearance information
@@ -383,78 +555,127 @@ function StudentDashboard() {
               Try again
             </button>
           </div>
-        ) : currentTab === "dashboard" && !clearanceRecord ? (
-          <div className="dashboard-state">
-            <span className="dashboard-state-icon" aria-hidden="true">✓</span>
-            <strong>No active clearance term</strong>
-            <span>There isn’t an active clearance checklist for your account right now.</span>
-          </div>
-        ) : currentTab === "dashboard" ? (
-          <div className="dashboard-canvas">
-            <HeroBanner requirements={requirements} overallStatus={overallStatus} clearance={clearanceRecord} />
-            <OverviewCards requirements={requirements} />
-            <MainContent
-              requirements={requirements}
-              onUploadProof={isDesignPreview ? undefined : openProofRequest}
-            />
-          </div>
-        ) : currentTab === "profile" ? (
-          <div className="dashboard-canvas-clearance-request-fix">
-            <ProfileSection onAvatarUpdated={handleAvatarStateChange} requirements={requirements} />
-          </div>
-        ) : currentTab === "request" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <ClearanceRequest 
-                requirements={requirements} 
-                onUploadSuccess={handleGlobalStatusUpdate}
-                onUploadTriggered={triggerUploadNotification}
-                onUploadCompleted={() => {
-                  setClearanceError("");
-                  setReloadKey((key) => key + 1);
-                }}
-                requestItemId={requestItemId}
-                onRequestItemHandled={clearRequestedItem}
-              />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>A clearance request is unavailable until a checklist is assigned to your account.</span>
-            </div>
-          )
-        ) : currentTab === "track" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <ClearanceTracker
-                requirements={requirements}
-                overallStatus={overallStatus}
-                clearance={clearanceRecord}
-              />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>Tracking details will appear when a clearance is assigned to your account.</span>
-            </div>
-          )
-        ) : currentTab === "download" || currentTab === "clearance" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <DownloadClearance requirements={requirements} clearance={clearanceRecord} />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>A clearance certificate will be available after a clearance is assigned.</span>
-            </div>
-          )
         ) : (
-          <div className="dashboard-canvas">
-            <div className="alert-card">Section in active development.</div>
+          <div key={currentTab} className="page-fade-in">
+            {currentTab === "dashboard" && !clearanceRecord ? (
+              <div className="dashboard-state">
+                <span className="dashboard-state-icon" aria-hidden="true">✓</span>
+                <strong>No active clearance term</strong>
+                <span>There isn’t an active clearance checklist for your account right now.</span>
+              </div>
+            ) : currentTab === "dashboard" ? (
+              <div className="dashboard-canvas">
+                <HeroBanner requirements={requirements} overallStatus={overallStatus} clearance={clearanceRecord} />
+                <OverviewCards requirements={requirements} />
+                <MainContent
+                  requirements={requirements}
+                  onUploadProof={isDesignPreview ? undefined : openProofRequest}
+                  onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
+                />
+              </div>
+            ) : currentTab === "profile" ? (
+              <div className="dashboard-canvas-clearance-request-fix">
+                <ProfileSection onAvatarUpdated={handleAvatarStateChange} requirements={requirements} />
+              </div>
+            ) : currentTab === "request" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <ClearanceRequest 
+                    requirements={requirements} 
+                    onUploadSuccess={handleGlobalStatusUpdate}
+                    onUploadTriggered={triggerUploadNotification}
+                    onUploadCompleted={() => {
+                      setClearanceError("");
+                      setReloadKey((key) => key + 1);
+                    }}
+                    onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
+                    requestItemId={requestItemId}
+                    onRequestItemHandled={clearRequestedItem}
+                  />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>A clearance request is unavailable until a checklist is assigned to your account.</span>
+                </div>
+              )
+            ) : currentTab === "track" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <ClearanceTracker
+                    requirements={requirements}
+                    overallStatus={overallStatus}
+                    clearance={clearanceRecord}
+                  />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>Tracking details will appear when a clearance is assigned to your account.</span>
+                </div>
+              )
+            ) : currentTab === "history" ? (
+              <div className="dashboard-canvas-clearance-request-fix">
+                <ClearanceHistory
+                  clearances={allClearances}
+                  activeClearanceId={clearanceRecord?.id}
+                  onSelectClearance={handleSelectClearanceFromHistory}
+                />
+              </div>
+            ) : currentTab === "download" || currentTab === "clearance" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <DownloadClearance requirements={requirements} clearance={clearanceRecord} />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>A clearance certificate will be available after a clearance is assigned.</span>
+                </div>
+              )
+            ) : (
+              <div className="dashboard-canvas">
+                <div className="alert-card">Section in active development.</div>
+              </div>
+            )}
           </div>
         )}
       </main>
+      {removingProofItem && (
+        <div className="profile-avatar-modal-overlay" onClick={closeRemoveProofModal}>
+          <div className="profile-avatar-modal-card-box" onClick={(event) => event.stopPropagation()}>
+            <h4>Remove Submitted Proof</h4>
+            <p>
+              Remove your uploaded settlement proof for{" "}
+              <strong>{removingProofItem.requirement_name || "this requirement"}</strong>? You can upload a new receipt afterward.
+            </p>
+            {removeProofError && (
+              <p role="alert" style={{ color: "#AA5757", fontWeight: 600, fontSize: "0.84rem" }}>
+                {removeProofError}
+              </p>
+            )}
+            <div className="profile-avatar-modal-actions-row">
+              <button
+                type="button"
+                className="submit-request-form-btn-cancel"
+                onClick={closeRemoveProofModal}
+                disabled={isRemovingProof}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="submit-request-form-btn-aligned"
+                style={{ backgroundColor: "#AA5757" }}
+                onClick={confirmRemoveProof}
+                disabled={isRemovingProof}
+              >
+                {isRemovingProof ? "Removing…" : "Remove Proof"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,487 @@
+# E-Clearance System: Frontend API Integration Guide
+
+**Document Version:** 1.1 (Production Environment Specification)  
+**Target Audience:** Frontend Engineering Team  
+**Scope:** HTTP Endpoints, Payload Schemas, Authentication Interceptors, Client-Side Routing, and State Handling  
+
+---
+
+## 1. System Architecture and Authentication
+
+### 1.1 API Environments, Server Roots, and Documentation
+The backend is deployed on Render and backed by a cloud MySQL database on Aiven.
+
+#### Server Host vs. API Base URL
+It is important to understand the distinction between the server origin and the API client base URL:
+* **Server Origin (Host Root):** `https://e-clearance-system-api.onrender.com`
+  * Hosts system-level routes such as the Django Admin (`/admin/`), Health checks (`/healthz`, `/health/`), and OpenAPI documentation.
+* **REST API Base URL (Client Prefix):** `https://e-clearance-system-api.onrender.com/api/v1/`
+  * All application REST endpoints (`/login/`, `/me/`, `/student-clearances/`, `/student-clearance-items/`, etc.) are mounted exclusively under `/api/v1/`.
+  * Setting your HTTP client (Axios / Fetch) `baseURL` to this `/api/v1/` path allows you to call relative paths cleanly (e.g., `apiClient.post('/login/', ...)` instead of repeating `/api/v1/` on every call).
+
+#### Interactive API Documentation
+* **Swagger UI:** `https://e-clearance-system-api.onrender.com/api/docs/swagger/`
+* **Redoc:** `https://e-clearance-system-api.onrender.com/api/docs/redoc/`
+* **OpenAPI Raw Schema (JSON/YAML):** `https://e-clearance-system-api.onrender.com/api/schema/`
+
+#### Local Development Fallback
+* **Local Server Root:** `http://localhost:8000`
+* **Local API Base URL:** `http://localhost:8000/api/v1/`
+* **Local Swagger UI:** `http://localhost:8000/api/docs/swagger/`
+
+#### Frontend Environment Variable Configuration (`.env`)
+```bash
+# Vite Configuration (.env.production / .env.local)
+VITE_API_BASE_URL=https://e-clearance-system-api.onrender.com/api/v1/
+VITE_GOOGLE_CLIENT_ID=976568905659-f0kanbapsqp6puq640df022l77eontko.apps.googleusercontent.com
+
+# Next.js / Create-React-App Alternative
+NEXT_PUBLIC_API_BASE_URL=https://e-clearance-system-api.onrender.com/api/v1/
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=976568905659-f0kanbapsqp6puq640df022l77eontko.apps.googleusercontent.com
+```
+
+### 1.2 Authentication and Header Management
+The backend enforces token-based authorization via JSON Web Tokens (JWT).
+* **Token Lifetimes:** Access Token: 15 minutes | Refresh Token: 31 days.
+* Upon successful authentication, store the token securely and attach it via the standard `Authorization` header:
+
+```typescript
+Authorization: Bearer <auth_token>
+```
+
+#### Axios Interceptor Configuration Example
+```typescript
+import axios from "axios";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://e-clearance-system-api.onrender.com/api/v1/";
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("auth_token");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export default apiClient;
+```
+
+### 1.3 Google Sign-In Authentication
+The backend supports Google Identity Services / OAuth 2.0 authentication. Frontend applications exchange a Google ID Token (credential) for the clearance platform's JWT access and refresh token pair.
+
+* **OAuth Client ID:**
+  ```text
+  976568905659-f0kanbapsqp6puq640df022l77eontko.apps.googleusercontent.com
+  ```
+* **Endpoint:** `POST /api/v1/auth/google/`
+* **Headers:** `Content-Type: application/json`
+* **Request Body:**
+  ```json
+  {
+    "token": "<GOOGLE_ID_TOKEN_CREDENTIAL>"
+  }
+  ```
+* **Success Response (`200 OK`):**
+  ```json
+  {
+    "access": "eyJhbGciOiJIUzI1NiIsIn...",
+    "refresh": "eyJhbGciOiJIUzI1NiIsIn..."
+  }
+  ```
+* **Backend Validation and Error Codes (`400 Bad Request` / `403 Forbidden`):**
+  The endpoint verifies the Google ID token signature against Google's public keys and asserts audience match with the Google Client ID. It then resolves the matching user account in the database.
+  
+  | Error Code (`errors.code`) | HTTP Status | Description / Resolution |
+  | :--- | :--- | :--- |
+  | `no_account` | `400 Bad Request` | Verified Google account has no matching registered user in the database. Instruct the user to contact the administrator or invite manager. |
+  | `email_not_verified` | `403 Forbidden` | Account exists but has not been activated via institutional email verification (`email_verified_at` is null). |
+  | `account_inactive` | `403 Forbidden` | Account is marked inactive (`is_active = false`). |
+  | `invalid_token` | `400 Bad Request` | Token signature is invalid or minted for a different client. |
+  | `token_expired` | `400 Bad Request` | Token expired before backend verification. Re-trigger Google sign-in. |
+  | `google_unreachable` | `503 Service Unavailable` | Backend was temporarily unable to reach Google's certificate endpoints. |
+
+### 1.4 Role-Based Route Redirection
+Upon authentication, query the user profile at `GET /api/v1/me/`. Inspect the `groups` array to determine the target portal destination:
+
+```typescript
+interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  groups: string[];
+  is_superuser: boolean;
+}
+
+export function resolvePortalRoute(user: UserProfile): string {
+  if (user.groups.includes("Students")) {
+    return "/student/clearance";
+  }
+
+  const signatoryRoles = [
+    "Librarians",
+    "Cashiers",
+    "Advisers",
+    "Governors",
+    "Deans",
+    "Program Chairs",
+  ];
+
+  if (user.groups.some((role) => signatoryRoles.includes(role))) {
+    return "/signatory/queue";
+  }
+
+  if (
+    user.groups.includes("Clearance Management System Admins") ||
+    user.is_superuser
+  ) {
+    return "/admin/dashboard";
+  }
+
+  return "/unauthorized";
+}
+```
+
+---
+
+## 2. Student Portal Integration
+
+---
+
+### 2.1 Fetch Active Clearance and Requirement Checklist
+* **Screen:** Student Clearance Dashboard (`S-1`)
+* **Endpoint:** `GET /api/v1/student-clearances/my-clearances/`
+* **Description:** Retrieves the active clearance record for the logged-in student, including the status of each sequential requirement.
+* **Response Payload (Array):**
+```json
+[
+  {
+    "id": 1,
+    "clearance_type_name": "Semestral Clearance",
+    "academic_year": "2026-2027",
+    "semester": "1st Semester",
+    "overall_status": "in_progress",
+    "is_enrolled": false,
+    "items": [
+      {
+        "id": 1,
+        "requirement_name": "Library Clearance",
+        "authorizing_role_name": "Librarians",
+        "order_sequence": 1,
+        "status": "pending",
+        "amount_due": "0.00",
+        "remarks": null,
+        "cleared_at": null
+      },
+      {
+        "id": 2,
+        "requirement_name": "Cashier Clearance",
+        "authorizing_role_name": "Cashiers",
+        "order_sequence": 2,
+        "status": "deficiency",
+        "amount_due": "150.00",
+        "remarks": "Overdue book penalty: Database System Concepts",
+        "proof_attachment": null,
+        "proof_notes": null
+      }
+    ]
+  }
+]
+```
+
+---
+
+### 2.2 Upload Settlement Proof
+* **Screen / Dialog:** Settlement Proof Submission Dialog (`S-2`)
+* **Endpoint:** `POST /api/v1/student-clearance-items/{id}/upload-proof/`
+* **Request Format:** `multipart/form-data`
+* **Media Handling:** The backend automatically uploads the binary file to institutional Cloudinary storage (`ubxjjws9`) and returns the permanent HTTPS CDN asset URL.
+* **Form Parameters:**
+  * `proof_attachment` (File, required): Image (JPEG/PNG) or PDF document.
+  * `proof_notes` (String, optional): Transaction reference numbers or settlement details.
+* **Client Implementation:**
+```typescript
+async function submitSettlementProof(
+  itemId: number,
+  file: File,
+  notes: string
+) {
+  const formData = new FormData();
+  formData.append("proof_attachment", file);
+  formData.append("proof_notes", notes);
+
+  const response = await apiClient.post(
+    `/student-clearance-items/${itemId}/upload-proof/`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+  return response.data;
+}
+```
+* **Resulting State:** The backend stores the Cloudinary URL in `proof_attachment` and timestamps `proof_uploaded_at`. Note: In the database schema (`schema.yaml`), the item `status` remains `has_issue` (or `pending`); `"under_review"` is currently computed client-side by checking the presence of `proof_attachment`. (An upcoming backend update will formalize `under_review` as a first-class DB enum).
+
+---
+
+### 2.3 Download Certificate of Clearance (PDF)
+* **Screen:** Student Clearance Dashboard (`S-1`)
+* **Endpoint:** `GET /api/v1/student-clearances/{id}/certificate/`
+* **Condition:** Enabled exclusively when `overall_status === "completed"`.
+* **Client Implementation:**
+```typescript
+async function downloadClearanceCertificate(clearanceId: number) {
+  const response = await apiClient.get(
+    `/student-clearances/${clearanceId}/certificate/`,
+    {
+      responseType: "blob",
+    }
+  );
+
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `Clearance_Certificate_${clearanceId}.pdf`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+```
+
+---
+
+### 2.4 Public QR Verification
+* **Dual-Mode Verification Support:** The backend provides a dual-mode endpoint at `/verify/{verification_token}/` (and `/clearance/verify/{verification_token}/`).
+  - **Browser / Mobile Camera Scan (`Accept: text/html`):** Renders a responsive, institutionally styled verification page (`verify.html`) with DNSC seals, student credentials, completion date, and verification badges.
+  - **Programmatic / API Call (`Accept: application/json`):** Returns the raw JSON verification payload below.
+* **Target QR URL:** The certificate QR code in `DownloadClearance.jsx` should point to:
+  `https://e-clearance-system-api.onrender.com/verify/{verification_token}/` (or the frontend reverse proxy route).
+* **Sample JSON Response:**
+```json
+{
+  "student_name": "Froyd D. Carbajosa",
+  "student_id": "202400633",
+  "program": "Bachelor of Science in Information Technology",
+  "clearance_type": "Semestral Clearance",
+  "academic_year": "2026-2027",
+  "semester": "1st Semester",
+  "completion_date": "2026-11-06T10:15:00Z",
+  "verification_token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "is_authentic": true
+}
+```
+
+---
+
+## 3. Clearance Signatory Portal Integration
+
+---
+
+### 3.1 Signatory Workload Metrics
+* **Screen:** Signatory Overview Dashboard (`SIG-1`)
+* **Endpoint:** `GET /api/v1/student-clearance-items/signatory-dashboard/`
+* **Response Payload:**
+```json
+{
+  "total_assigned": 36,
+  "pending_count": 36,
+  "deficiency_count": 0,
+  "under_review_count": 0,
+  "cleared_count": 0
+}
+```
+
+---
+
+### 3.2 Clearance Approval Queue
+* **Screen:** Clearance Approval Queue Table (`SIG-2`)
+* **Endpoint:** `GET /api/v1/student-clearance-items/`
+* **Supported Query Parameters:**
+  * `status`: Filter by status (`pending`, `deficiency`, `under_review`, `cleared`).
+  * `search`: Filter by student full name or student ID number.
+  * `page` and `page_size`: Pagination parameters.
+* **Sample Response Item:**
+```json
+{
+  "id": 2,
+  "student": {
+    "student_id": "202400633",
+    "full_name": "Froyd D. Carbajosa",
+    "program_code": "BSIT",
+    "year_level": 3,
+    "section": "C"
+  },
+  "requirement_name": "Cashier Clearance",
+  "status": "under_review",
+  "amount_due": "150.00",
+  "remarks": "Overdue book penalty: Database System Concepts",
+  "proof_attachment": "https://res.cloudinary.com/ubxjjws9/image/upload/v1/receipt.jpg",
+  "proof_notes": "Paid via GCash Ref 901234567890",
+  "is_locked": false
+}
+```
+
+---
+
+### 3.3 Approve / Clear Requirement
+* **Trigger:** Clicked on "Approve / Clear" in the queue table or settlement review dialog.
+* **Endpoint:** `PATCH /api/v1/student-clearance-items/{id}/`
+* **Request Payload:**
+```json
+{
+  "status": "cleared"
+}
+```
+
+---
+
+### 3.4 Flag Deficiency
+* **Trigger:** Submitted via Flag Deficiency Dialog (`SIG-3`).
+* **Endpoint:** `PATCH /api/v1/student-clearance-items/{id}/`
+* **Request Payload (Wire Format):**
+```json
+{
+  "status": "has_issue",
+  "amount_due": 150.0,
+  "remarks": "Overdue book penalty: Database System Concepts"
+}
+```
+> [!IMPORTANT]
+> **Status Enum Contract Note:** In the OpenAPI schema (`schema.yaml`), `StudentClearanceItemStatusEnum` accepts `'has_issue'`, `'cleared'`, or `'pending'`. The frontend UI displays `'has_issue'` as **"Deficiency"**. Sending `"status": "deficiency"` directly over the wire triggers a 400 validation error unless translated by the client mapper or until the backend serializer aliases it.
+*Note: Dispatches an asynchronous email notification to the student automatically.*
+
+---
+
+### 3.5 Program Chair Exclusive Endpoints
+
+#### Program Chair Cohort Dashboard
+* **Screen:** Program Chair Cohort Overview (`SIG-5`)
+* **Endpoint:** `GET /api/v1/student-clearances/program-chair-dashboard/`
+* **Permission:** Restricted to accounts holding `Roles.PROGRAM_CHAIR` or administrative roles.
+* **Returns:** Program-wide clearance analytics and roster completion tracking for all students enrolled in the department.
+
+#### Validate Student for Enrollment
+* **Trigger:** Clicked on "Validate for Enrollment" button for a fully cleared student.
+* **Endpoint:** `POST /api/v1/student-clearances/{id}/enroll/`
+* **Request Payload:** Empty JSON object `{}`.
+* **Result:** Sets `is_enrolled = true` on the target `StudentClearance` record and attributes the action to the authenticated Program Chair.
+
+---
+
+## 4. Administration Portal Integration
+
+---
+
+### 4.1 Campus-Wide Analytics Summary
+* **Screen:** Executive Analytics Dashboard (`A-1`)
+* **Endpoint:** `GET /api/v1/clearance-types/admin-summary/`
+* **Returns:** Total enrolled students, completion percentages, outstanding liabilities total, and bottleneck office breakdown.
+
+---
+
+### 4.2 Issue Clearance Batch
+* **Trigger:** Clicked via "Issue Clearance to Students" in Template Management (`A-2`).
+* **Endpoint:** `POST /api/v1/clearance-types/{id}/issue/`
+* **Request Payload:** Empty JSON object `{}`.
+* **Result:** Initiates batch generation of student clearance instances and requirement items for all eligible students.
+
+---
+
+### 4.3 Bulk Student Roster Import
+* **Screen / Modal:** Student Directory Import Dialog (`A-3`)
+* **Upload Endpoint:** `POST /api/v1/admin/student-bulk-invitations/`
+* **Request Format:** `multipart/form-data` with `file: students.xlsx`
+* **Template Retrieval:** `GET /api/v1/admin/student-bulk-invitations/template/` (Returns downloadable `.xlsx` template).
+
+---
+
+### 4.4 Audit Logs and Report Exports
+* **Screen:** Audit Logs Interface (`A-4`)
+* **Data Log Query:** `GET /api/v1/audit-logs/?page=1&action=SIGN`
+* **PDF Report Stream:** `GET /api/v1/audit-logs/report/pdf/`
+* **Excel Report Stream:** `GET /api/v1/audit-logs/report/excel/`
+
+---
+
+## 5. Critical Frontend Implementation Rules
+
+### 5.1 Enforcing Sequential Approval in the UI
+The backend strictly validates sequential clearance order (`validate_sequential_clearance`). Attempting to sign Step 2 when Step 1 is incomplete returns an HTTP `400 Bad Request`.
+
+#### Backend Error Payload (Enriched)
+```json
+{
+  "detail": "Sequential clearance locked: 'Library Clearance' (Step 1) must be cleared first.",
+  "blocked_by": "Library Clearance",
+  "blocking_step": 1,
+  "blocking_item_id": 42
+}
+```
+
+* **Frontend Handling:** Check the `order_sequence` and statuses of prior items. If preceding items are not `cleared`, render the approval action button in a **disabled state** with an explanatory tooltip:
+```typescript
+function canSignRequirement(
+  currentItem: ClearanceItem,
+  allItems: ClearanceItem[]
+): boolean {
+  const previousIncomplete = allItems.some(
+    (item) =>
+      item.order_sequence < currentItem.order_sequence &&
+      item.status !== "cleared"
+  );
+  return !previousIncomplete;
+}
+```
+If a request fails with 400, display `error.response?.data?.detail` or `error.response?.data?.blocked_by` directly to the signatory.
+
+### 5.2 Multipart Form Data for File Uploads
+When submitting settlement proof documents, always instantiate a standard `FormData` object and omit manual `Content-Type` headers so the browser automatically sets the correct boundary string:
+```typescript
+const formData = new FormData();
+formData.append("proof_attachment", selectedFile);
+if (notes) {
+  formData.append("proof_notes", notes);
+}
+```
+
+### 5.3 Cache Invalidation and Optimistic Updates
+Upon successful execution of a sign-off (`PATCH`), deficiency flag (`PATCH`), or enrollment validation (`POST`), immediately trigger a query refetch for the respective view to ensure table counters and status badges reflect real-time backend state.
+
+---
+
+## 6. Seeded Production Test Accounts
+
+The production database hosted on Aiven is pre-seeded with active test accounts for integration testing:
+
+### 6.1 Student Test Accounts (BSIT 3rd Year, Set C)
+All student passwords are: `password123`
+
+| Student ID | Login Username | Full Name | Program | Assigned Requirements |
+| :--- | :--- | :--- | :--- | :--- |
+| `202400633` | `Student202400633` | Froyd D. Carbajosa | BSIT 3-C | 6 Sequential Items |
+| `202401033` | `Student202401033` | Chieruf Jhann E. Pastedeo | BSIT 3-C | 6 Sequential Items |
+| `202401164` | `Student202401164` | Shane Angelo C. Garcia | BSIT 3-C | 6 Sequential Items |
+| `202301626` | `Student202301626` | Erick Cyle A. Embodo | BSIT 3-C | 6 Sequential Items |
+| `202401177` | `Student202401177` | Cyrus M. Suelto | BSIT 3-C | 6 Sequential Items |
+| `202400928` | `Student202400928` | Roosevelt O. Gulanes | BSIT 3-C | 6 Sequential Items |
+| `202400906` | `gaan0906` (`gaan0906@gmail.com`) | Frontend Dev Gaan | BSIT 3-C | 6 Sequential Items (Google Sign-In Enabled) |
+
+### 6.2 Administrative and Staff Accounts
+Default seeded password for all administrative accounts: `password123`
+
+| Username | Role | Scope |
+| :--- | :--- | :--- |
+| `superadmin` | Superuser / Platform Admin | Full Platform |
+| `dnsc_ic_admin` | Institute Admin (`Institute Admins`) | Institute of Computing |

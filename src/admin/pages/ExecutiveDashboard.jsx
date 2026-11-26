@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { displayApiText } from "../../services/clearanceDisplay.js";
 import SidebarPanel from "../components/SidebarPanel.jsx";
 import {
   apiErrorMessage,
@@ -148,6 +149,9 @@ function buildView(summary, backlog, dashboard) {
 export default function ExecutiveDashboard() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [types, setTypes] = useState([]);
+  const [selectedTypeId, setSelectedTypeId] = useState(null);
+  const [scope, setScope] = useState("all");
   const [term, setTerm] = useState(null);
   const [view, setView] = useState(null);
 
@@ -156,8 +160,11 @@ export default function ExecutiveDashboard() {
 
     async function load() {
       try {
-        const [summary, types] = await Promise.all([fetchAdminSummary(), fetchClearanceTypes()]);
-        const selected = pickClearanceType(types);
+        const [summary, loadedTypes] = await Promise.all([fetchAdminSummary(), fetchClearanceTypes()]);
+        const chosen = selectedTypeId != null
+          ? loadedTypes.find((item) => String(item.id) === String(selectedTypeId))
+          : null;
+        const selected = chosen || pickClearanceType(loadedTypes);
         let dashboard = null;
         if (selected?.id != null) {
           try {
@@ -167,14 +174,25 @@ export default function ExecutiveDashboard() {
           }
         }
 
+        const reqs = Array.isArray(dashboard?.clearance_type?.requirements)
+          ? dashboard.clearance_type.requirements
+          : Array.isArray(selected?.requirements)
+            ? selected.requirements
+            : [];
+        const reqIds = reqs.length > 0 ? new Set(reqs.map((req) => Number(req.id))) : null;
+
         let backlog = { rows: [], pendingTotal: 0, issueTotal: 0 };
         try {
-          backlog = await fetchOfficeBacklog();
+          backlog = await fetchOfficeBacklog(reqIds);
         } catch {
           backlog = { rows: [], pendingTotal: 0, issueTotal: 0 };
         }
 
         if (cancelled) return;
+        setTypes(loadedTypes);
+        if (selected?.id != null && selectedTypeId == null) {
+          setSelectedTypeId(selected.id);
+        }
         setTerm(presentTerm(selected, dashboard));
         setView(buildView(summary, backlog, dashboard));
         setStatus("ready");
@@ -189,7 +207,26 @@ export default function ExecutiveDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedTypeId]);
+
+  const isPastType = (type) => Boolean(type?.is_issued && !type?.is_active);
+  const scopedTypes = types.filter((type) => {
+    if (scope === "active") return !isPastType(type);
+    if (scope === "past") return isPastType(type);
+    return true;
+  });
+
+  const handleScopeChange = (nextScope) => {
+    setScope(nextScope);
+    const matching = types.filter((type) => {
+      if (nextScope === "active") return !isPastType(type);
+      if (nextScope === "past") return isPastType(type);
+      return true;
+    });
+    if (matching.length > 0 && !matching.some((item) => String(item.id) === String(selectedTypeId))) {
+      setSelectedTypeId(matching[0].id);
+    }
+  };
 
   const distribution = view?.distribution ?? [];
   const bottlenecks = view?.bottlenecks ?? [];
@@ -208,6 +245,80 @@ export default function ExecutiveDashboard() {
           <p className="dashboard-banner" role="alert">
             {error}
           </p>
+        )}
+
+        {types.length > 1 && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "14px",
+              padding: "10px 14px",
+              marginBottom: "14px",
+            }}
+          >
+            <div role="group" aria-label="Filter clearance cycles" style={{ display: "inline-flex", gap: "4px", background: "var(--bg-page)", padding: "3px", borderRadius: "10px" }}>
+              {[
+                { id: "all", label: `All (${types.length})` },
+                { id: "active", label: `Active (${types.filter((t) => !isPastType(t)).length})` },
+                { id: "past", label: `Past (${types.filter((t) => isPastType(t)).length})` },
+              ].map((opt) => {
+                const activeOpt = scope === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={activeOpt}
+                    onClick={() => handleScopeChange(opt.id)}
+                    style={{
+                      border: "none",
+                      background: activeOpt ? "var(--bg-navbar)" : "transparent",
+                      color: activeOpt ? "#ffffff" : "var(--text-secondary)",
+                      padding: "6px 11px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", fontWeight: 700, color: "var(--text-secondary)" }}>
+              <span>Clearance Cycle:</span>
+              <select
+                aria-label="Select clearance template for dashboard"
+                value={selectedTypeId ?? ""}
+                onChange={(event) => setSelectedTypeId(event.target.value)}
+                style={{
+                  border: "1.5px solid var(--border-color)",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  background: "#ffffff",
+                  fontFamily: "inherit",
+                }}
+              >
+                {(scopedTypes.length > 0 ? scopedTypes : types).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {displayApiText(t.name) || `Template ${t.id}`}
+                    {t.academic_year || t.semester ? ` (${[t.academic_year, t.semester].filter(Boolean).join(" · ")})` : ""}
+                    {t.is_issued ? (t.is_active ? " — Active" : " — Past") : " — Draft"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         )}
 
         <div className="dashboard-top-row">

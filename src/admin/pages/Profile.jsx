@@ -8,6 +8,7 @@ import {
 } from "../services/portalApi.js";
 import PasswordInput from "../../components/PasswordInput.jsx";
 import PortalLoading from "../../components/PortalLoading.jsx";
+import EmailChangeCard from "../../components/EmailChangeCard.jsx";
 import { publishAccount, subscribePortalRefresh } from "../../services/portalRefresh.js";
 import "./Profile.css";
 
@@ -324,6 +325,17 @@ export default function Profile() {
               </button>
             </div>
           </form>
+
+          <EmailChangeCard
+            currentEmail={profile?.email || ""}
+            onEmailUpdated={async () => {
+              const refreshed = await fetchCurrentAdmin({ fresh: true });
+              if (refreshed) {
+                setProfile(refreshed);
+                publishAccount(refreshed);
+              }
+            }}
+          />
         </div>
       </div>
     </div>

@@ -316,9 +316,30 @@ function ClearanceQR({ value, verificationToken, size = 150 }) {
       <span style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#737568", fontWeight: "600" }}>
         {verificationToken}
       </span>
-      <span style={{ fontSize: "0.72rem", color: "#737568" }}>Scan to verify</span>
+      <a
+        href={value}
+        target="_blank"
+        rel="noreferrer"
+        style={{ fontSize: "0.74rem", color: "var(--primary-green)", fontWeight: "700", textDecoration: "underline" }}
+      >
+        Scan or open verification page ↗
+      </a>
     </div>
   );
+}
+
+const DEFAULT_BACKEND_ORIGIN = "https://e-clearance-system-api.onrender.com";
+
+function verificationOrigin() {
+  const configured = import.meta.env.VITE_API_BASE_URL;
+  if (configured) {
+    try {
+      return new URL(configured, window.location.origin).origin;
+    } catch {
+      // Fall back to default backend origin.
+    }
+  }
+  return DEFAULT_BACKEND_ORIGIN;
 }
 
 function DownloadClearance({ requirements = [], clearance }) {
@@ -333,10 +354,7 @@ function DownloadClearance({ requirements = [], clearance }) {
     (totalCount > 0 && clearedCount === totalCount);
   const verificationToken = clearance?.verification_token;
   const verificationUrl = verificationToken
-    ? new URL(
-      `student-clearances/verify/${encodeURIComponent(verificationToken)}/`,
-      new URL(apiClient.defaults.baseURL, window.location.origin),
-    ).toString()
+    ? `${verificationOrigin()}/verify/${encodeURIComponent(verificationToken)}/`
     : "";
   const academicYear = plainAcademicYear(clearance?.academic_year) || "—";
   const semester = shortSemester(clearance?.semester) || "—";
