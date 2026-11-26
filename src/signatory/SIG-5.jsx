@@ -8,7 +8,7 @@ export default function SIG5({ students, onUpdateStudent }) {
   const roster = students.map((student) => ({
     ...student,
     course: student.program,
-    status: student.steps.every(Boolean)
+    status: student.steps.length > 0 && student.steps.every(Boolean)
       ? 'Completed'
       : student.status === 'Deficiency'
         ? 'Deficiency'
@@ -18,7 +18,7 @@ export default function SIG5({ students, onUpdateStudent }) {
 
   const validateEnrollment = (id) => {
     const student = students.find((item) => item.id === id);
-    if (!student || student.validated || !student.steps.every(Boolean)) return;
+    if (!student || student.validated || student.steps.length === 0 || !student.steps.every(Boolean)) return;
     onUpdateStudent(id, { validated: true });
   };
 

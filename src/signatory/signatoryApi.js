@@ -114,11 +114,8 @@ function orderedItems(record) {
 
 function stepsFrom(record) {
   const nested = orderedItems(record);
-  return Array.from({ length: 6 }, (_, index) => {
-    const match = nested.find((item) => Number(item.order_sequence) === index + 1);
-    if (!match) return false;
-    return String(match.status ?? "").toLowerCase() === "cleared";
-  });
+  if (nested.length === 0) return [];
+  return nested.map((item) => String(item.status ?? "").toLowerCase() === "cleared");
 }
 
 function proofState(record, status) {

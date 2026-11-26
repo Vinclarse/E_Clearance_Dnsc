@@ -54,7 +54,7 @@ function resourceName(url = "") {
 
 function dropCachedReads(url = "") {
   const resource = resourceName(url);
-  if (!resource) {
+  if (!resource || resource.startsWith("student-clearance") || resource.startsWith("clearance-")) {
     readCache.clear();
     return;
   }

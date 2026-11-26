@@ -911,8 +911,8 @@ function HomePage() {
             <p>A Web-Based Student Clearance Management System</p>
           </div>
           <div className="footer-project">
-            <strong>Student Project</strong>
-            <p>This website uses mock data for demonstration and academic purposes.</p>
+            <strong>Institute of Computing</strong>
+            <p>Digital Student Clearance, Signatory Review, and QR Verification Platform.</p>
             <p>© {new Date().getFullYear()} ClearanceDNSC</p>
           </div>
         </div>
