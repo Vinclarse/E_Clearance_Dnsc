@@ -358,7 +358,9 @@ export default function SignatoryApp() {
               )}
             </div>
           )}
-          {page}
+          <div key={activePage} className="page-fade-in">
+            {page}
+          </div>
         </>
       )}
     </SignatoryLayout>

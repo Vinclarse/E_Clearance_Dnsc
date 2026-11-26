@@ -1060,9 +1060,11 @@ function App() {
     if (isDesignPreview && !hasAuthToken) return <StudentDashboard />
     return hasAuthToken && accountKind === 'student' ? <StudentDashboard /> : null
   }
-  if (isForgotPasswordPage) return <ForgotPasswordPage />
+  if (isForgotPasswordPage) return <div key="forgot-password" className="page-fade-in"><ForgotPasswordPage /></div>
   if (isLoginPage && hasAuthToken) return null
-  return isLoginPage ? <LoginPage /> : <HomePage />
+  return isLoginPage
+    ? <div key="login" className="page-fade-in"><LoginPage /></div>
+    : <div key="home" className="page-fade-in"><HomePage /></div>
 }
 
 export default App

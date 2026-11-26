@@ -555,85 +555,89 @@ function StudentDashboard() {
               Try again
             </button>
           </div>
-        ) : currentTab === "dashboard" && !clearanceRecord ? (
-          <div className="dashboard-state">
-            <span className="dashboard-state-icon" aria-hidden="true">✓</span>
-            <strong>No active clearance term</strong>
-            <span>There isn’t an active clearance checklist for your account right now.</span>
-          </div>
-        ) : currentTab === "dashboard" ? (
-          <div className="dashboard-canvas">
-            <HeroBanner requirements={requirements} overallStatus={overallStatus} clearance={clearanceRecord} />
-            <OverviewCards requirements={requirements} />
-            <MainContent
-              requirements={requirements}
-              onUploadProof={isDesignPreview ? undefined : openProofRequest}
-              onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
-            />
-          </div>
-        ) : currentTab === "profile" ? (
-          <div className="dashboard-canvas-clearance-request-fix">
-            <ProfileSection onAvatarUpdated={handleAvatarStateChange} requirements={requirements} />
-          </div>
-        ) : currentTab === "request" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <ClearanceRequest 
-                requirements={requirements} 
-                onUploadSuccess={handleGlobalStatusUpdate}
-                onUploadTriggered={triggerUploadNotification}
-                onUploadCompleted={() => {
-                  setClearanceError("");
-                  setReloadKey((key) => key + 1);
-                }}
-                onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
-                requestItemId={requestItemId}
-                onRequestItemHandled={clearRequestedItem}
-              />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>A clearance request is unavailable until a checklist is assigned to your account.</span>
-            </div>
-          )
-        ) : currentTab === "track" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <ClearanceTracker
-                requirements={requirements}
-                overallStatus={overallStatus}
-                clearance={clearanceRecord}
-              />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>Tracking details will appear when a clearance is assigned to your account.</span>
-            </div>
-          )
-        ) : currentTab === "history" ? (
-          <div className="dashboard-canvas-clearance-request-fix">
-            <ClearanceHistory
-              clearances={allClearances}
-              activeClearanceId={clearanceRecord?.id}
-              onSelectClearance={handleSelectClearanceFromHistory}
-            />
-          </div>
-        ) : currentTab === "download" || currentTab === "clearance" ? (
-          clearanceRecord ? (
-            <div className="dashboard-canvas-clearance-request-fix">
-              <DownloadClearance requirements={requirements} clearance={clearanceRecord} />
-            </div>
-          ) : (
-            <div className="dashboard-state">
-              <strong>No active clearance term</strong>
-              <span>A clearance certificate will be available after a clearance is assigned.</span>
-            </div>
-          )
         ) : (
-          <div className="dashboard-canvas">
-            <div className="alert-card">Section in active development.</div>
+          <div key={currentTab} className="page-fade-in">
+            {currentTab === "dashboard" && !clearanceRecord ? (
+              <div className="dashboard-state">
+                <span className="dashboard-state-icon" aria-hidden="true">✓</span>
+                <strong>No active clearance term</strong>
+                <span>There isn’t an active clearance checklist for your account right now.</span>
+              </div>
+            ) : currentTab === "dashboard" ? (
+              <div className="dashboard-canvas">
+                <HeroBanner requirements={requirements} overallStatus={overallStatus} clearance={clearanceRecord} />
+                <OverviewCards requirements={requirements} />
+                <MainContent
+                  requirements={requirements}
+                  onUploadProof={isDesignPreview ? undefined : openProofRequest}
+                  onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
+                />
+              </div>
+            ) : currentTab === "profile" ? (
+              <div className="dashboard-canvas-clearance-request-fix">
+                <ProfileSection onAvatarUpdated={handleAvatarStateChange} requirements={requirements} />
+              </div>
+            ) : currentTab === "request" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <ClearanceRequest 
+                    requirements={requirements} 
+                    onUploadSuccess={handleGlobalStatusUpdate}
+                    onUploadTriggered={triggerUploadNotification}
+                    onUploadCompleted={() => {
+                      setClearanceError("");
+                      setReloadKey((key) => key + 1);
+                    }}
+                    onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
+                    requestItemId={requestItemId}
+                    onRequestItemHandled={clearRequestedItem}
+                  />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>A clearance request is unavailable until a checklist is assigned to your account.</span>
+                </div>
+              )
+            ) : currentTab === "track" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <ClearanceTracker
+                    requirements={requirements}
+                    overallStatus={overallStatus}
+                    clearance={clearanceRecord}
+                  />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>Tracking details will appear when a clearance is assigned to your account.</span>
+                </div>
+              )
+            ) : currentTab === "history" ? (
+              <div className="dashboard-canvas-clearance-request-fix">
+                <ClearanceHistory
+                  clearances={allClearances}
+                  activeClearanceId={clearanceRecord?.id}
+                  onSelectClearance={handleSelectClearanceFromHistory}
+                />
+              </div>
+            ) : currentTab === "download" || currentTab === "clearance" ? (
+              clearanceRecord ? (
+                <div className="dashboard-canvas-clearance-request-fix">
+                  <DownloadClearance requirements={requirements} clearance={clearanceRecord} />
+                </div>
+              ) : (
+                <div className="dashboard-state">
+                  <strong>No active clearance term</strong>
+                  <span>A clearance certificate will be available after a clearance is assigned.</span>
+                </div>
+              )
+            ) : (
+              <div className="dashboard-canvas">
+                <div className="alert-card">Section in active development.</div>
+              </div>
+            )}
           </div>
         )}
       </main>
