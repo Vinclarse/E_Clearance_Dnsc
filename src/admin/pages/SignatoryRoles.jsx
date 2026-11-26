@@ -120,6 +120,7 @@ export default function SignatoryRoles() {
       fetchUsers({
         search: userQuery.trim() || undefined,
         is_staff: true,
+        exclude_admins: true,
         per_page: 20,
         current_page: 1,
       })

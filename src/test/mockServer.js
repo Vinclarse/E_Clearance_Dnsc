@@ -358,6 +358,12 @@ export function createMockBackend() {
       if (config.params?.is_staff) {
         filtered = filtered.filter((u) => u.is_staff || (u.groups || []).some((g) => g !== "Students"));
       }
+      if (config.params?.exclude_admins) {
+        const adminSet = new Set(["school admins", "institute admins", "clearance management system admins", "institute staffs", "institute staff"]);
+        filtered = filtered.filter(
+          (u) => !u.is_superuser && !(u.groups || []).some((g) => adminSet.has(String(g).toLowerCase())),
+        );
+      }
       if (config.params?.search) {
         const q = String(config.params.search).toLowerCase();
         filtered = filtered.filter((u) => u.username.toLowerCase().includes(q) || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q));

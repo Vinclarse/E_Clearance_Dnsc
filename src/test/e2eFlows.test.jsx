@@ -305,6 +305,9 @@ describe("E-Clearance DNSC End-to-End User Flows", () => {
 
     expect(screen.queryByText("dnsc_ic_admin")).not.toBeInTheDocument();
     expect(screen.queryByText("superadmin")).not.toBeInTheDocument();
+    expect(
+      backend.requests.some((req) => req.url === "users/" && req.params?.exclude_admins === true),
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: /staff_library/i }));
     await waitFor(() => {
