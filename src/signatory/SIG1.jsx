@@ -146,6 +146,7 @@ export default function SIG1({ profile, students, metrics, onUpdateStudent, onNa
                       <button
                         onClick={() => handleApprove(student.id)}
                         disabled={student.isActionable === false}
+                        title={student.isActionable === false ? (student.blockingOffice ? `Waiting for ${student.blockingOffice}` : 'Waiting for an earlier step to be cleared') : undefined}
                         style={{
                           backgroundColor: student.isActionable === false ? '#E2E7DC' : '#2E3D28',
                           color: student.isActionable === false ? '#74806E' : '#FFF',

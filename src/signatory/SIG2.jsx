@@ -21,6 +21,11 @@ export default function SIG2({ students, onUpdateStudent }) {
   const [proofLoading, setProofLoading] = useState(false);
   const [proofFailed, setProofFailed] = useState(false);
   const [proofError, setProofError] = useState('');
+  const [submittingAction, setSubmittingAction] = useState(false);
+  const [flaggingStudent, setFlaggingStudent] = useState(null);
+  const [flagRemarks, setFlagRemarks] = useState('');
+  const [flagAmountDue, setFlagAmountDue] = useState('');
+  const [flagError, setFlagError] = useState('');
 
   const pageSize = 8;
 
@@ -37,7 +42,15 @@ export default function SIG2({ students, onUpdateStudent }) {
       .then((detail) => {
         setInspectingStudent((current) => (
           current && current.id === student.id
-            ? { ...current, proofUrl: detail.proofUrl, proof: detail.proof || current.proof, proofDetails: current.proofDetails || detail.proofDetails }
+            ? {
+                ...current,
+                proofUrl: detail.proofUrl,
+                proof: detail.proof || current.proof,
+                proofNotes: current.proofNotes || detail.proofNotes,
+                proofDetails: current.proofDetails || detail.proofDetails,
+                note: current.note || detail.note,
+                amountDue: current.amountDue || detail.amountDue,
+              }
             : current
         ));
       })
@@ -45,11 +58,63 @@ export default function SIG2({ students, onUpdateStudent }) {
       .finally(() => setProofLoading(false));
   };
 
-  const updateStudentStatus = (id, newStatus) => {
+  const openFlagModal = (student) => {
+    setFlaggingStudent(student);
+    setFlagRemarks(student.note || '');
+    setFlagAmountDue(student.amountDue && Number(student.amountDue) > 0 ? student.amountDue : '');
+    setFlagError('');
+  };
+
+  const closeFlagModal = () => {
+    if (submittingAction) return;
+    setFlaggingStudent(null);
+    setFlagRemarks('');
+    setFlagAmountDue('');
+    setFlagError('');
+  };
+
+  const updateStudentStatus = async (id, newStatus, extra = {}) => {
     const student = students.find((item) => item.id === id);
-    if (newStatus === 'Cleared' && student?.status === 'Deficiency') return;
-    onUpdateStudent(id, { status: newStatus });
-    setInspectingStudent(null);
+    if (newStatus === 'Cleared' && student?.status === 'Deficiency' && !extra.fromProofReview) return false;
+    setSubmittingAction(true);
+    try {
+      const ok = await onUpdateStudent(id, { status: newStatus, ...extra });
+      if (ok !== false) {
+        setInspectingStudent(null);
+        return true;
+      }
+      return false;
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const submitFlagDeficiency = async (event) => {
+    event.preventDefault();
+    if (!flaggingStudent || submittingAction) return;
+    const remarks = flagRemarks.trim();
+    if (!remarks) {
+      setFlagError('Please enter a reason or remarks for the deficiency.');
+      return;
+    }
+    const rawAmount = flagAmountDue.trim();
+    if (rawAmount !== '') {
+      const parsed = Number(rawAmount);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setFlagError('Amount due must be a valid non-negative number.');
+        return;
+      }
+    }
+    setFlagError('');
+    const ok = await updateStudentStatus(flaggingStudent.id, 'Deficiency', {
+      note: remarks,
+      amountDue: rawAmount === '' ? null : Number(rawAmount).toFixed(2),
+    });
+    if (ok !== false) {
+      setFlaggingStudent(null);
+      setFlagRemarks('');
+      setFlagAmountDue('');
+    }
   };
 
   const filteredStudents = students.filter(s => {
@@ -262,6 +327,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                     <button
                       type="button"
                       disabled={st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false}
+                      title={st.isActionable === false ? (st.blockingOffice ? `Waiting for ${st.blockingOffice}` : 'Waiting for an earlier step to be cleared') : undefined}
                       onClick={() => updateStudentStatus(st.id, 'Cleared')}
                       style={{
                         backgroundColor: st.status === 'Cleared' || st.status === 'Deficiency' || st.isActionable === false ? '#E2E7DC' : '#2E3D28',
@@ -286,7 +352,7 @@ export default function SIG2({ students, onUpdateStudent }) {
                     <button
                       type="button"
                       disabled={st.status === 'Cleared'}
-                      onClick={() => updateStudentStatus(st.id, 'Deficiency')}
+                      onClick={() => openFlagModal(st)}
                       style={{
                         backgroundColor: '#FFF',
                         color: '#AA5757',
@@ -310,7 +376,8 @@ export default function SIG2({ students, onUpdateStudent }) {
                     </button>
 
                     <button
-                      onClick={() => setInspectingStudent(st)}
+                      type="button"
+                      onClick={() => openProof(st)}
                       style={{
                         backgroundColor: '#EDF1E8',
                         color: '#29352A',
@@ -413,15 +480,94 @@ export default function SIG2({ students, onUpdateStudent }) {
       </div>
 
       <ProofPreview
+        key={inspectingStudent?.id ?? 'none'}
         student={inspectingStudent}
         loading={proofLoading}
         error={proofError}
         failed={proofFailed}
+        submitting={submittingAction}
         onImageError={() => setProofFailed(true)}
         onClose={() => setInspectingStudent(null)}
-        onApprove={inspectingStudent ? () => updateStudentStatus(inspectingStudent.id, 'Cleared') : undefined}
+        onApprove={inspectingStudent ? () => updateStudentStatus(inspectingStudent.id, 'Cleared', { fromProofReview: inspectingStudent.status === 'Under Review' }) : undefined}
+        onReject={inspectingStudent ? (reason) => updateStudentStatus(inspectingStudent.id, 'Deficiency', { note: reason, rejectProof: true }) : undefined}
         approveDisabled={!inspectingStudent || inspectingStudent.status === 'Deficiency' || inspectingStudent.status === 'Cleared' || inspectingStudent.isActionable === false}
       />
+
+      {flaggingStudent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 1000,
+          }}
+          onClick={closeFlagModal}
+        >
+          <div
+            className="signatory-modal"
+            onClick={(event) => event.stopPropagation()}
+            style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '1.5rem', width: 'min(460px, calc(100vw - 2rem))', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+          >
+            <h3 style={{ margin: '0 0 0.35rem 0', color: '#29352A' }}>Flag Deficiency</h3>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.84rem', color: '#74806E' }}>
+              {flaggingStudent.name} ({flaggingStudent.studentNumber || 'No student ID'}) · {flaggingStudent.req}
+            </p>
+            <form onSubmit={submitFlagDeficiency} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label htmlFor="flag-remarks" style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#74806E', marginBottom: '0.35rem' }}>
+                  REASON / REMARKS (REQUIRED)
+                </label>
+                <textarea
+                  id="flag-remarks"
+                  rows={3}
+                  value={flagRemarks}
+                  onChange={(event) => setFlagRemarks(event.target.value)}
+                  placeholder="e.g., Overdue book penalty: Database System Concepts"
+                  style={{ width: '100%', padding: '0.65rem 0.75rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.84rem', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="flag-amount-due" style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, color: '#74806E', marginBottom: '0.35rem' }}>
+                  AMOUNT DUE IN PHP (OPTIONAL)
+                </label>
+                <input
+                  id="flag-amount-due"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={flagAmountDue}
+                  onChange={(event) => setFlagAmountDue(event.target.value)}
+                  placeholder="0.00"
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: '#74806E', backgroundColor: '#F6F8F4', padding: '0.65rem 0.75rem', borderRadius: '10px' }}>
+                Flagging a deficiency sends an automated notice to the student and places this requirement on hold until resolved.
+              </p>
+              {flagError && <div role="alert" style={{ color: '#AA5757', fontSize: '0.78rem', fontWeight: 600 }}>{flagError}</div>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={closeFlagModal}
+                  disabled={submittingAction}
+                  style={{ border: 'none', backgroundColor: '#EDF1E8', color: '#29352A', padding: '0.55rem 1rem', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAction}
+                  style={{ border: 'none', backgroundColor: '#AA5757', color: '#FFF', padding: '0.55rem 1.1rem', borderRadius: '10px', fontWeight: 700, cursor: submittingAction ? 'wait' : 'pointer' }}
+                >
+                  {submittingAction ? 'Saving…' : 'Confirm Deficiency'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

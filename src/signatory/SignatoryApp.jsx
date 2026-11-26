@@ -14,6 +14,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   profileFromAccount,
+  signatoryErrorMessage,
 } from './signatoryApi.js'
 import PortalLoading from '../components/PortalLoading.jsx'
 import { subscribeAccount, subscribePortalRefresh } from '../services/portalRefresh.js'
@@ -35,6 +36,7 @@ export default function SignatoryApp() {
   const [cohort, setCohort] = useState([])
   const [metrics, setMetrics] = useState(null)
   const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -107,13 +109,15 @@ export default function SignatoryApp() {
 
   const updateStudent = async (id, updates) => {
     const student = students.find((item) => item.id === id) || cohort.find((item) => item.id === id)
-    if (!student) return
+    if (!student) return false
 
+    setActionError('')
     const applyLocal = (row) => {
       if (String(row.id) !== String(id)) return row
       return {
         ...row,
         status: updates.status || row.status,
+        note: typeof updates.note === 'string' ? updates.note : row.note,
         validated: updates.validated === true ? true : row.validated,
       }
     }
@@ -123,15 +127,13 @@ export default function SignatoryApp() {
       setStudents((rows) => rows.map(applyLocal))
       setCohort((rows) => rows.map(applyLocal))
     } catch (error) {
-      const message = error?.response?.data?.errors?.detail
-        || error?.response?.data?.message
-        || error.message
-        || 'The clearance record could not be updated.'
+      const message = signatoryErrorMessage(error, 'The clearance record could not be updated.')
+      setActionError(message)
       addNotification({
         title: 'Update was not saved',
-        desc: message === 'Error' ? 'The clearance record could not be updated.' : message,
+        desc: message,
       })
-      return
+      return false
     }
 
     try {
@@ -140,13 +142,10 @@ export default function SignatoryApp() {
       setCohort(records.cohort || [])
       setMetrics(records.metrics || null)
     } catch (error) {
-      const message = error?.response?.data?.errors?.detail
-        || error?.response?.data?.message
-        || error.message
-        || 'The updated list could not be refreshed.'
+      const message = signatoryErrorMessage(error, 'The updated list could not be refreshed.')
       addNotification({
         title: 'Saved, but the list could not be refreshed',
-        desc: message === 'Error' ? 'The updated list could not be refreshed.' : message,
+        desc: message,
       })
     }
 
@@ -159,11 +158,14 @@ export default function SignatoryApp() {
       title = 'Clearance Approved'
       desc = `${student.name}'s clearance was approved.`
     } else if (updates.status === 'Deficiency') {
-      title = 'Deficiency Flagged'
-      desc = `${student.name}'s clearance was flagged for a deficiency.`
+      title = updates.rejectProof ? 'Proof Rejected' : 'Deficiency Flagged'
+      desc = updates.rejectProof
+        ? `${student.name}'s submitted proof was rejected and returned to deficiency.`
+        : `${student.name}'s clearance was flagged for a deficiency.`
     }
 
     addNotification({ title, desc })
+    return true
   }
 
   let page
@@ -213,6 +215,35 @@ export default function SignatoryApp() {
       ) : (
         <>
           {loadError && <p className="portal-loading-error" role="alert">{loadError}</p>}
+          {actionError && (
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+                backgroundColor: '#FAE8E5',
+                color: '#8C3333',
+                border: '1px solid #E5B4B4',
+                borderRadius: '14px',
+                padding: '0.75rem 1rem',
+                marginBottom: '1rem',
+                fontSize: '0.84rem',
+                fontWeight: '600',
+              }}
+            >
+              <span>{actionError}</span>
+              <button
+                type="button"
+                aria-label="Dismiss error"
+                onClick={() => setActionError('')}
+                style={{ background: 'none', border: 'none', color: '#8C3333', fontWeight: '800', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+          )}
           {page}
         </>
       )}
