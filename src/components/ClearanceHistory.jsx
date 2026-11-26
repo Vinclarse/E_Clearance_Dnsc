@@ -1,20 +1,21 @@
+import { useState } from "react";
 import { displayApiText, formatClearanceTerm } from "../services/clearanceDisplay";
 
 function statusTone(status) {
   const key = String(status || "pending").toLowerCase().replace(/[\s-]+/g, "_");
   if (key === "completed" || key === "cleared") {
-    return { label: "COMPLETED", bg: "#E5F3E8", color: "#458469" };
+    return { label: "COMPLETED", bg: "#E5F3E8", color: "#458469", isPast: true };
   }
   if (key === "has_issue" || key === "deficiency") {
-    return { label: "DEFICIENCY", bg: "#FAE8E5", color: "#AA5757" };
+    return { label: "DEFICIENCY", bg: "#FAE8E5", color: "#AA5757", isPast: false };
   }
   if (key === "rejected") {
-    return { label: "REJECTED", bg: "#FAE8E5", color: "#AA5757" };
+    return { label: "REJECTED", bg: "#FAE8E5", color: "#AA5757", isPast: true };
   }
   if (key === "under_review" || key === "in_progress") {
-    return { label: key === "under_review" ? "UNDER REVIEW" : "IN PROGRESS", bg: "#E2F1F7", color: "#3E7E9C" };
+    return { label: key === "under_review" ? "UNDER REVIEW" : "IN PROGRESS", bg: "#E2F1F7", color: "#3E7E9C", isPast: false };
   }
-  return { label: "PENDING", bg: "#FFF3DC", color: "#A77218" };
+  return { label: "PENDING", bg: "#FFF3DC", color: "#A77218", isPast: false };
 }
 
 function formatDate(value) {
@@ -24,7 +25,28 @@ function formatDate(value) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+function isPastClearance(record) {
+  const tone = statusTone(record?.overall_status ?? record?.status);
+  return tone.isPast || record?.clearance_type_is_active === false;
+}
+
 function ClearanceHistory({ clearances = [], activeClearanceId, onSelectClearance }) {
+  const [scope, setScope] = useState("all");
+  const activeCount = clearances.filter((record) => !isPastClearance(record)).length;
+  const pastCount = clearances.length - activeCount;
+
+  const visibleClearances = clearances.filter((record) => {
+    if (scope === "active") return !isPastClearance(record);
+    if (scope === "past") return isPastClearance(record);
+    return true;
+  });
+
+  const filters = [
+    { id: "all", label: "All", count: clearances.length },
+    { id: "active", label: "Active", count: activeCount },
+    { id: "past", label: "Past / Completed", count: pastCount },
+  ];
+
   return (
     <div className="tracker-blueprint-layout">
       <div className="tracker-blueprint-main-box" style={{ minHeight: "auto" }}>
@@ -33,20 +55,49 @@ function ClearanceHistory({ clearances = [], activeClearanceId, onSelectClearanc
             <p className="panel-eyebrow" style={{ margin: "0 0 4px 0" }}>Academic archive</p>
             <h2 style={{ margin: 0, fontSize: "1.35rem", color: "#2c2d27" }}>Clearance History</h2>
           </div>
-          <span className="panel-count">{clearances.length} {clearances.length === 1 ? "record" : "records"}</span>
+
+          <div role="group" aria-label="Filter clearance records" style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px", backgroundColor: "#F3F5EE", padding: "4px", borderRadius: "12px", border: "1px solid #E2E4D8" }}>
+            {filters.map((filter) => {
+              const selected = scope === filter.id;
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setScope(filter.id)}
+                  style={{
+                    border: "none",
+                    backgroundColor: selected ? "#2E3D28" : "transparent",
+                    color: selected ? "#FFFFFF" : "#4E5648",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {filter.label} ({filter.count})
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <hr className="tracker-blueprint-divider-line" />
 
-        {clearances.length === 0 ? (
+        {visibleClearances.length === 0 ? (
           <div className="empty-checklist">
             <span className="empty-checklist-mark" aria-hidden="true">✓</span>
-            <strong>No clearance records yet</strong>
-            <span>Your current and past academic term clearances will appear here once issued.</span>
+            <strong>{clearances.length === 0 ? "No clearance records yet" : `No ${scope} clearances`}</strong>
+            <span>
+              {clearances.length === 0
+                ? "Your current and past academic term clearances will appear here once issued."
+                : "Try switching the filter above to view your other clearance terms."}
+            </span>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {clearances.map((record) => {
+            {visibleClearances.map((record) => {
               const rawStatus = record.overall_status ?? record.status;
               const tone = statusTone(rawStatus);
               const isSelected = String(record.id) === String(activeClearanceId);

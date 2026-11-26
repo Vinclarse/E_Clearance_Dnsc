@@ -16,9 +16,10 @@ async function enrichClearanceTerm(clearance, cache) {
   let semester = textValue(clearance?.semester) || textValue(nested.semester);
   let academicYear = textValue(clearance?.academic_year) || textValue(nested.academic_year);
   let typeName = textValue(clearance?.clearance_type_name) || textValue(nested.name);
+  let typeIsActive = nested.is_active ?? clearance?.clearance_type_is_active ?? null;
   const typeId = clearance?.clearance_type_id || nested.id;
 
-  if ((!semester || !academicYear || !typeName) && typeId) {
+  if ((!semester || !academicYear || !typeName || typeIsActive == null) && typeId) {
     if (!cache.has(String(typeId))) {
       cache.set(String(typeId), apiClient.get(`clearance-types/${typeId}/`)
         .then((response) => unwrapEnvelope(response))
@@ -28,10 +29,15 @@ async function enrichClearanceTerm(clearance, cache) {
     semester = semester || textValue(type?.semester);
     academicYear = academicYear || textValue(type?.academic_year);
     typeName = typeName || textValue(type?.name);
+    if (typeIsActive == null && type && typeof type.is_active === "boolean") {
+      typeIsActive = type.is_active;
+    }
   }
 
   return {
     ...clearance,
+    clearance_type_id: typeId ?? null,
+    clearance_type_is_active: typeIsActive,
     semester,
     academic_year: academicYear,
     clearance_type_name: typeName,
@@ -141,14 +147,34 @@ function blockingStepFrom(item, clearance) {
   return name ? `Step ${blocker.order_sequence}: ${name}` : `Step ${blocker.order_sequence}`;
 }
 
+function clearanceCycleMeta(clearance, item) {
+  const typeId = clearance?.clearance_type_id ?? clearance?.clearance_type?.id ?? item?.clearance_type_id ?? null;
+  const typeName = textValue(clearance?.clearance_type_name || item?.clearance_type_name);
+  const academicYear = textValue(clearance?.academic_year || item?.academic_year);
+  const semester = textValue(clearance?.semester || item?.semester);
+  const overall = String(clearance?.overall_status ?? clearance?.status ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+  const typeIsActive = clearance?.clearance_type_is_active ?? null;
+  const cycleKey = String(typeId ?? ([typeName, academicYear, semester].filter(Boolean).join("|") || "default"));
+  const cycleLabel = [typeName || "Semestral Clearance", academicYear, semester].filter(Boolean).join(" · ");
+  return {
+    clearanceTypeId: typeId,
+    clearanceTypeIsActive: typeIsActive,
+    clearanceOverallStatus: overall,
+    clearanceCycleKey: cycleKey,
+    clearanceCycleLabel: cycleLabel,
+  };
+}
+
 function mapQueueItem(item, clearance) {
   const status = labelStatus(item.status);
   const proof = proofState(item, status);
   const blockingOffice = item.is_actionable === false ? blockingStepFrom(item, clearance) : "";
+  const cycle = clearanceCycleMeta(clearance, item);
   return {
     id: String(item.id),
     itemId: item.id,
     clearanceId: item.student_clearance_id ?? clearance?.id ?? null,
+    ...cycle,
     name: asText(clearance?.student_name || item.student_name, "Student"),
     studentNumber: asText(clearance?.student_number || item.student_number),
     program: asText(clearance?.program || item.program),
@@ -179,10 +205,12 @@ function mapCohort(clearance) {
   const items = orderedItems(clearance);
   const hasIssue = items.some((entry) => String(entry.status ?? "").toLowerCase() === "has_issue");
   const allCleared = items.length > 0 && items.every((entry) => String(entry.status ?? "").toLowerCase() === "cleared");
+  const cycle = clearanceCycleMeta(clearance);
   return {
     id: String(clearance.id),
     itemId: null,
     clearanceId: clearance.id,
+    ...cycle,
     name: asText(clearance?.student_name, "Student"),
     studentNumber: asText(clearance?.student_number),
     program: asText(clearance?.program),
@@ -217,7 +245,7 @@ function isMetrics(value) {
   );
 }
 
-function metricsFromQueue(queue) {
+export function metricsFromQueue(queue) {
   return {
     totalAssigned: queue.length,
     pending: queue.filter((row) => row.status === "Pending").length,

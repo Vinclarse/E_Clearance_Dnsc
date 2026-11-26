@@ -49,6 +49,7 @@ async function withClearanceTerm(clearance) {
     semester,
     academic_year: academicYear,
     clearance_type_name: typeName,
+    clearance_type_is_active: nested.is_active ?? clearance?.clearance_type_is_active ?? null,
   };
 }
 
@@ -174,10 +175,33 @@ const previewClearance = {
   clearance_type_name: "Student Clearance",
 };
 
+function initialStudentTab() {
+  const path = window.location.pathname.replace(/\/+$/, "").toLowerCase();
+  if (path === "/student/request") return "request";
+  if (path === "/student/tracker" || path === "/student/track") return "track";
+  if (path === "/student/history") return "history";
+  if (path === "/student/download" || path === "/student/certificate") return "download";
+  if (path === "/student/profile") return "profile";
+  return "dashboard";
+}
+
+function isPastStudentClearance(clearance) {
+  const status = String(clearance?.overall_status ?? clearance?.status ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+  return status === "completed" || status === "cleared" || status === "rejected" || clearance?.clearance_type_is_active === false;
+}
+
+function formatClearanceOptionLabel(clearance) {
+  const title = clearance?.clearance_type_name || "Semestral Clearance";
+  const term = [clearance?.academic_year, clearance?.semester].filter(Boolean).join(" · ");
+  const tag = isPastStudentClearance(clearance) ? "Past" : "Active";
+  return term ? `${title} (${term}) — ${tag}` : `${title} — ${tag}`;
+}
+
 function StudentDashboard() {
   const isDesignPreview = new URLSearchParams(window.location.search).get("preview") === "true";
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [currentTab, setCurrentTab] = useState("dashboard");
+  const [currentTab, setCurrentTab] = useState(initialStudentTab);
+  const [clearanceScope, setClearanceScope] = useState("all");
   const [profile, setProfile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [customNotification, setCustomNotification] = useState(null);
@@ -389,6 +413,25 @@ function StudentDashboard() {
     : displayName.charAt(0).toUpperCase() || "S";
 
   const overallStatus = calculateOverallStatus();
+  const scopedClearances = allClearances.filter((entry) => {
+    if (clearanceScope === "active") return !isPastStudentClearance(entry);
+    if (clearanceScope === "past") return isPastStudentClearance(entry);
+    return true;
+  });
+  const showTermSwitcher = allClearances.length > 1 && ["dashboard", "request", "track", "download", "clearance"].includes(currentTab);
+
+  const handleScopeChange = (nextScope) => {
+    setClearanceScope(nextScope);
+    const matching = allClearances.filter((entry) => {
+      if (nextScope === "active") return !isPastStudentClearance(entry);
+      if (nextScope === "past") return isPastStudentClearance(entry);
+      return true;
+    });
+    if (matching.length > 0 && !matching.some((entry) => String(entry.id) === String(clearanceRecord?.id))) {
+      setLoadingClearance(true);
+      setSelectedClearanceId(matching[0].id);
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -421,6 +464,81 @@ function StudentDashboard() {
       )}
 
       <main className="dashboard-content">
+        {showTermSwitcher && !loadingClearance && !clearanceError && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E2E4D8",
+              borderRadius: "16px",
+              padding: "10px 14px",
+              marginBottom: "14px",
+            }}
+          >
+            <div role="group" aria-label="Filter clearance cycle" style={{ display: "inline-flex", gap: "4px", backgroundColor: "#F3F5EE", padding: "3px", borderRadius: "10px" }}>
+              {[
+                { id: "all", label: `All (${allClearances.length})` },
+                { id: "active", label: `Active (${allClearances.filter((entry) => !isPastStudentClearance(entry)).length})` },
+                { id: "past", label: `Past (${allClearances.filter((entry) => isPastStudentClearance(entry)).length})` },
+              ].map((option) => {
+                const activeOption = clearanceScope === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={activeOption}
+                    onClick={() => handleScopeChange(option.id)}
+                    style={{
+                      border: "none",
+                      backgroundColor: activeOption ? "#2E3D28" : "transparent",
+                      color: activeOption ? "#FFFFFF" : "#4E5648",
+                      padding: "5px 10px",
+                      borderRadius: "7px",
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", fontWeight: 700, color: "#4E5648" }}>
+              <span>Clearance:</span>
+              <select
+                aria-label="Select clearance term"
+                value={clearanceRecord?.id ?? ""}
+                onChange={(event) => {
+                  const chosenId = event.target.value;
+                  if (chosenId && String(chosenId) !== String(clearanceRecord?.id)) {
+                    setLoadingClearance(true);
+                    setSelectedClearanceId(chosenId);
+                  }
+                }}
+                style={{
+                  border: "1px solid #CFD6C5",
+                  backgroundColor: "#F7F8F3",
+                  color: "#2c2d27",
+                  borderRadius: "8px",
+                  padding: "6px 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                }}
+              >
+                {(scopedClearances.length > 0 ? scopedClearances : allClearances).map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {formatClearanceOptionLabel(entry)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         {isDesignPreview && currentTab === "dashboard" && (
           <div className="dashboard-preview-notice" role="status">
             Design preview — sample data, not live clearance information
