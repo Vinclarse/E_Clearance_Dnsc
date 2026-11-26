@@ -56,7 +56,7 @@ function ClearanceHistory({ clearances = [], activeClearanceId, onSelectClearanc
             <h2 style={{ margin: 0, fontSize: "1.35rem", color: "#2c2d27" }}>Clearance History</h2>
           </div>
 
-          <div role="group" aria-label="Filter clearance records" style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px", backgroundColor: "#F3F5EE", padding: "4px", borderRadius: "12px", border: "1px solid #E2E4D8" }}>
+          <div role="group" aria-label="Filter clearance records" style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px", maxWidth: "100%", boxSizing: "border-box", backgroundColor: "#F3F5EE", padding: "4px", borderRadius: "12px", border: "1px solid #E2E4D8" }}>
             {filters.map((filter) => {
               const selected = scope === filter.id;
               return (
@@ -66,6 +66,7 @@ function ClearanceHistory({ clearances = [], activeClearanceId, onSelectClearanc
                   aria-pressed={selected}
                   onClick={() => setScope(filter.id)}
                   style={{
+                    flex: "1 1 auto",
                     border: "none",
                     backgroundColor: selected ? "#2E3D28" : "transparent",
                     color: selected ? "#FFFFFF" : "#4E5648",

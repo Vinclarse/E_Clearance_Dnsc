@@ -122,6 +122,11 @@
   outline: none;
   transition: border-color 0.15s;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   box-sizing: border-box;
 }
 .ct-select:focus { border-color: var(--accent-olive); }
@@ -687,9 +692,15 @@
     grid-template-columns: 1fr;
   }
   .ct-field-wide,
-  .ct-form-field {
+  .ct-form-field,
+  .ct-year-levels-field {
     min-width: 0;
     flex-basis: 100%;
+  }
+  .ct-config-top > div,
+  .ct-builder-header > div {
+    max-width: 100%;
+    flex-wrap: wrap;
   }
   .ct-step {
     flex-wrap: wrap;
@@ -697,5 +708,17 @@
   .ct-step-info {
     min-width: 0;
     flex: 1 1 160px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ct-modal-card {
+    padding: 18px 16px;
+  }
+  .ct-modal-row {
+    grid-template-columns: 1fr;
+  }
+  .ct-modal-actions {
+    flex-wrap: wrap;
   }
 }

@@ -580,4 +580,8 @@
   .sr2-staff-table {
     min-width: 560px;
   }
+  .sr2-candidate-list button {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
 }

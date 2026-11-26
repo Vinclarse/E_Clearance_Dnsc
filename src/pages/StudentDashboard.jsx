@@ -465,21 +465,8 @@ function StudentDashboard() {
 
       <main className="dashboard-content">
         {showTermSwitcher && !loadingClearance && !clearanceError && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "10px",
-              backgroundColor: "#FFFFFF",
-              border: "1px solid #E2E4D8",
-              borderRadius: "16px",
-              padding: "10px 14px",
-              marginBottom: "14px",
-            }}
-          >
-            <div role="group" aria-label="Filter clearance cycle" style={{ display: "inline-flex", gap: "4px", backgroundColor: "#F3F5EE", padding: "3px", borderRadius: "10px" }}>
+          <div className="clearance-cycle-bar clearance-cycle-bar--student">
+            <div role="group" aria-label="Filter clearance cycle" className="clearance-cycle-pills">
               {[
                 { id: "all", label: `All (${allClearances.length})` },
                 { id: "active", label: `Active (${allClearances.filter((entry) => !isPastStudentClearance(entry)).length})` },
@@ -492,24 +479,15 @@ function StudentDashboard() {
                     type="button"
                     aria-pressed={activeOption}
                     onClick={() => handleScopeChange(option.id)}
-                    style={{
-                      border: "none",
-                      backgroundColor: activeOption ? "#2E3D28" : "transparent",
-                      color: activeOption ? "#FFFFFF" : "#4E5648",
-                      padding: "5px 10px",
-                      borderRadius: "7px",
-                      fontSize: "0.76rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
+                    className={`clearance-cycle-btn${activeOption ? " is-active" : ""}`}
                   >
                     {option.label}
                   </button>
                 );
               })}
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", fontWeight: 700, color: "#4E5648" }}>
-              <span>Clearance:</span>
+            <label className="clearance-cycle-select-wrap">
+              <span className="clearance-cycle-select-label">Clearance:</span>
               <select
                 aria-label="Select clearance term"
                 value={clearanceRecord?.id ?? ""}
@@ -520,15 +498,7 @@ function StudentDashboard() {
                     setSelectedClearanceId(chosenId);
                   }
                 }}
-                style={{
-                  border: "1px solid #CFD6C5",
-                  backgroundColor: "#F7F8F3",
-                  color: "#2c2d27",
-                  borderRadius: "8px",
-                  padding: "6px 10px",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                }}
+                className="clearance-cycle-select"
               >
                 {(scopedClearances.length > 0 ? scopedClearances : allClearances).map((entry) => (
                   <option key={entry.id} value={entry.id}>

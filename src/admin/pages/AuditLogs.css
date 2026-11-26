@@ -141,6 +141,11 @@
   outline: none;
   transition: border-color 0.15s;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 .al2-select:focus { border-color: var(--accent-olive); }
 
@@ -582,5 +587,14 @@
   .al2-search-wrap {
     min-width: 0;
     flex-basis: 100%;
+  }
+  .al2-select {
+    flex: 1 1 140px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .al2-entries-count {
+    width: 100%;
+    margin-left: 0;
   }
 }

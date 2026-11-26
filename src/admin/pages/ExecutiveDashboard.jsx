@@ -248,21 +248,8 @@ export default function ExecutiveDashboard() {
         )}
 
         {types.length > 1 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "10px",
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-color)",
-              borderRadius: "14px",
-              padding: "10px 14px",
-              marginBottom: "14px",
-            }}
-          >
-            <div role="group" aria-label="Filter clearance cycles" style={{ display: "inline-flex", gap: "4px", background: "var(--bg-page)", padding: "3px", borderRadius: "10px" }}>
+          <div className="clearance-cycle-bar clearance-cycle-bar--admin">
+            <div role="group" aria-label="Filter clearance cycles" className="clearance-cycle-pills">
               {[
                 { id: "all", label: `All (${types.length})` },
                 { id: "active", label: `Active (${types.filter((t) => !isPastType(t)).length})` },
@@ -275,39 +262,20 @@ export default function ExecutiveDashboard() {
                     type="button"
                     aria-pressed={activeOpt}
                     onClick={() => handleScopeChange(opt.id)}
-                    style={{
-                      border: "none",
-                      background: activeOpt ? "var(--bg-navbar)" : "transparent",
-                      color: activeOpt ? "#ffffff" : "var(--text-secondary)",
-                      padding: "6px 11px",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
+                    className={`clearance-cycle-btn${activeOpt ? " is-active" : ""}`}
                   >
                     {opt.label}
                   </button>
                 );
               })}
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", fontWeight: 700, color: "var(--text-secondary)" }}>
-              <span>Clearance Cycle:</span>
+            <label className="clearance-cycle-select-wrap">
+              <span className="clearance-cycle-select-label">Clearance Cycle:</span>
               <select
                 aria-label="Select clearance template for dashboard"
                 value={selectedTypeId ?? ""}
                 onChange={(event) => setSelectedTypeId(event.target.value)}
-                style={{
-                  border: "1.5px solid var(--border-color)",
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                  background: "#ffffff",
-                  fontFamily: "inherit",
-                }}
+                className="clearance-cycle-select"
               >
                 {(scopedTypes.length > 0 ? scopedTypes : types).map((t) => (
                   <option key={t.id} value={t.id}>

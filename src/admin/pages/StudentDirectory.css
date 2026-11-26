@@ -241,6 +241,11 @@
   outline: none;
   transition: border-color 0.15s;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 .sd2-select:focus { border-color: var(--accent-olive); }
 
@@ -457,5 +462,18 @@
   .sd2-header-actions .sd2-btn-dark {
     flex: 1 1 160px;
     justify-content: center;
+  }
+  .sd2-search-wrap {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .sd2-select {
+    flex: 1 1 140px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .sd2-count {
+    width: 100%;
+    margin-left: 0;
   }
 }

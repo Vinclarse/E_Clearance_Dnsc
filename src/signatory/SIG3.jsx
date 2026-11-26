@@ -108,27 +108,30 @@ export default function SIG3({ students, onUpdateStudent }) {
         <div className="signatory-deficiencies-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
           <input
             type="search"
+            className="signatory-deficiencies-search"
             aria-label="Search by student name or ID"
             placeholder="Name or Student ID"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            style={{ width: '180px', maxWidth: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+            style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
           />
           <select
+            className="signatory-deficiencies-select"
             aria-label="Filter by academic program"
             value={selectedProgram}
             onChange={(event) => setSelectedProgram(event.target.value)}
-            style={{ width: '120px', maxWidth: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+            style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
           >
             <option>All Programs</option>
             <option>BSIT</option>
             <option>BSIS</option>
           </select>
           <select
+            className="signatory-deficiencies-select"
             aria-label="Filter by year"
             value={selectedYear}
             onChange={(event) => setSelectedYear(event.target.value)}
-            style={{ width: '120px', maxWidth: '100%', padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
+            style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E7DC', fontSize: '0.8rem', boxSizing: 'border-box', backgroundColor: '#F6F8F4' }}
           >
             <option>All years</option>
             <option value="1">1st Year</option>
@@ -326,7 +329,7 @@ export default function SIG3({ students, onUpdateStudent }) {
 
 function HeaderPill({ count, label, accent }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', borderLeft: `4px solid ${accent}`, backgroundColor: '#F6F8F4', padding: '0.65rem 0.9rem', borderRadius: '12px', width: '180px' }}>
+    <div className="signatory-header-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', borderLeft: `4px solid ${accent}`, backgroundColor: '#F6F8F4', padding: '0.65rem 0.9rem', borderRadius: '12px', boxSizing: 'border-box' }}>
       <strong style={{ fontSize: '1.5rem', lineHeight: 1.1, color: '#29352A', flexShrink: 0 }}>{count}</strong>
       <span style={{ color: '#74806E', fontSize: '0.62rem', lineHeight: 1.1 }}>{label}</span>
     </div>

@@ -396,9 +396,9 @@ function DownloadClearance({ requirements = [], clearance }) {
     <div style={{ width: "100%", boxSizing: "border-box" }}>
       <div className="download-blueprint-grid-layout">
         <div className="download-blueprint-top-full-panel">
-          <div style={{ display: "flex", alignItems: "center", gap: "24px", width: "100%" }}>
-            <div style={{ fontSize: "3.5rem" }}>🏛️</div>
-            <div style={{ marginRight: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "16px 24px", width: "100%", boxSizing: "border-box" }}>
+            <div style={{ fontSize: "3.5rem", flexShrink: 0 }}>🏛️</div>
+            <div style={{ marginRight: "auto", flex: "1 1 240px", minWidth: 0 }}>
               <h3 style={{ margin: "0 0 4px 0", fontSize: "1.4rem", fontWeight: "800", color: "#1a1a1a" }}>
                 DAVAO DEL NORTE STATE COLLEGE
               </h3>

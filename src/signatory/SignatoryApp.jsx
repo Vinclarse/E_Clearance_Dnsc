@@ -287,21 +287,8 @@ export default function SignatoryApp() {
             </div>
           )}
           {showCycleFilterBar && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-                backgroundColor: '#FFFFFF',
-                borderRadius: '16px',
-                padding: '0.65rem 1rem',
-                marginBottom: '1rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-              }}
-            >
-              <div role="group" aria-label="Filter by clearance status" style={{ display: 'inline-flex', gap: '0.25rem', backgroundColor: '#F3F5EE', padding: '0.22rem', borderRadius: '10px' }}>
+            <div className="clearance-cycle-bar clearance-cycle-bar--signatory">
+              <div role="group" aria-label="Filter by clearance status" className="clearance-cycle-pills">
                 {[
                   { id: 'all', label: `All (${students.length})` },
                   { id: 'active', label: `Active (${students.filter((row) => !isPastRecord(row)).length})` },
@@ -314,16 +301,7 @@ export default function SignatoryApp() {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setClearanceScope(option.id)}
-                      style={{
-                        border: 'none',
-                        backgroundColor: selected ? '#2E3D28' : 'transparent',
-                        color: selected ? '#FFFFFF' : '#51664C',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '8px',
-                        fontSize: '0.76rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                      }}
+                      className={`clearance-cycle-btn${selected ? ' is-active' : ''}`}
                     >
                       {option.label}
                     </button>
@@ -331,21 +309,13 @@ export default function SignatoryApp() {
                 })}
               </div>
               {clearanceCycles.length > 1 && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', fontWeight: '700', color: '#51664C' }}>
-                  <span>Clearance Cycle:</span>
+                <label className="clearance-cycle-select-wrap">
+                  <span className="clearance-cycle-select-label">Clearance Cycle:</span>
                   <select
                     aria-label="Filter by clearance cycle"
                     value={selectedCycleKey}
                     onChange={(event) => setSelectedCycleKey(event.target.value)}
-                    style={{
-                      border: '1px solid #DCE3D3',
-                      backgroundColor: '#F6F8F4',
-                      color: '#29352A',
-                      borderRadius: '10px',
-                      padding: '0.4rem 0.75rem',
-                      fontSize: '0.78rem',
-                      fontWeight: '600',
-                    }}
+                    className="clearance-cycle-select"
                   >
                     <option value="all">All Clearances ({clearanceCycles.length})</option>
                     {clearanceCycles.map((cycle) => (

@@ -116,6 +116,24 @@
   display: none;
 }
 
+.signatory-header-pill {
+  width: 180px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.signatory-deficiencies-search {
+  width: 180px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.signatory-deficiencies-select {
+  width: 120px;
+  max-width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
   .signatory-shell {
     padding: 0 0 calc(76px + env(safe-area-inset-bottom, 0px)) !important;
@@ -604,6 +622,26 @@
     width: 100%;
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .signatory-deficiencies-search {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .signatory-deficiencies-select {
+    flex: 1 1 130px;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .signatory-header-pill {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .signatory-approval-panel,
