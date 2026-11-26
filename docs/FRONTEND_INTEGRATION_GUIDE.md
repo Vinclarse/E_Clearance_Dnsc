@@ -230,7 +230,7 @@ async function submitSettlementProof(
   return response.data;
 }
 ```
-* **Resulting State:** Item `status` transitions to `"under_review"`.
+* **Resulting State:** The backend stores the Cloudinary URL in `proof_attachment` and timestamps `proof_uploaded_at`. Note: In the database schema (`schema.yaml`), the item `status` remains `has_issue` (or `pending`); `"under_review"` is currently computed client-side by checking the presence of `proof_attachment`. (An upcoming backend update will formalize `under_review` as a first-class DB enum).
 
 ---
 
@@ -263,10 +263,12 @@ async function downloadClearanceCertificate(clearanceId: number) {
 ---
 
 ### 2.4 Public QR Verification
-* **Screen:** Public QR Verification Screen (`S-3`)
-* **Endpoint:** `GET /api/v1/student-clearances/verify/{verification_token}/`
-* **Authorization:** None (Public Endpoint).
-* **Sample Production Response:**
+* **Dual-Mode Verification Support:** The backend provides a dual-mode endpoint at `/verify/{verification_token}/` (and `/clearance/verify/{verification_token}/`).
+  - **Browser / Mobile Camera Scan (`Accept: text/html`):** Renders a responsive, institutionally styled verification page (`verify.html`) with DNSC seals, student credentials, completion date, and verification badges.
+  - **Programmatic / API Call (`Accept: application/json`):** Returns the raw JSON verification payload below.
+* **Target QR URL:** The certificate QR code in `DownloadClearance.jsx` should point to:
+  `https://e-clearance-system-api.onrender.com/verify/{verification_token}/` (or the frontend reverse proxy route).
+* **Sample JSON Response:**
 ```json
 {
   "student_name": "Froyd D. Carbajosa",
@@ -348,14 +350,16 @@ async function downloadClearanceCertificate(clearanceId: number) {
 ### 3.4 Flag Deficiency
 * **Trigger:** Submitted via Flag Deficiency Dialog (`SIG-3`).
 * **Endpoint:** `PATCH /api/v1/student-clearance-items/{id}/`
-* **Request Payload:**
+* **Request Payload (Wire Format):**
 ```json
 {
-  "status": "deficiency",
+  "status": "has_issue",
   "amount_due": 150.0,
   "remarks": "Overdue book penalty: Database System Concepts"
 }
 ```
+> [!IMPORTANT]
+> **Status Enum Contract Note:** In the OpenAPI schema (`schema.yaml`), `StudentClearanceItemStatusEnum` accepts `'has_issue'`, `'cleared'`, or `'pending'`. The frontend UI displays `'has_issue'` as **"Deficiency"**. Sending `"status": "deficiency"` directly over the wire triggers a 400 validation error unless translated by the client mapper or until the backend serializer aliases it.
 *Note: Dispatches an asynchronous email notification to the student automatically.*
 
 ---
@@ -414,7 +418,18 @@ async function downloadClearanceCertificate(clearanceId: number) {
 ## 5. Critical Frontend Implementation Rules
 
 ### 5.1 Enforcing Sequential Approval in the UI
-The backend validates sequential order (`validate_sequential_clearance`). Attempting to sign Step 2 when Step 1 is incomplete returns an HTTP `400 Bad Request`.
+The backend strictly validates sequential clearance order (`validate_sequential_clearance`). Attempting to sign Step 2 when Step 1 is incomplete returns an HTTP `400 Bad Request`.
+
+#### Backend Error Payload (Enriched)
+```json
+{
+  "detail": "Sequential clearance locked: 'Library Clearance' (Step 1) must be cleared first.",
+  "blocked_by": "Library Clearance",
+  "blocking_step": 1,
+  "blocking_item_id": 42
+}
+```
+
 * **Frontend Handling:** Check the `order_sequence` and statuses of prior items. If preceding items are not `cleared`, render the approval action button in a **disabled state** with an explanatory tooltip:
 ```typescript
 function canSignRequirement(
@@ -429,6 +444,7 @@ function canSignRequirement(
   return !previousIncomplete;
 }
 ```
+If a request fails with 400, display `error.response?.data?.detail` or `error.response?.data?.blocked_by` directly to the signatory.
 
 ### 5.2 Multipart Form Data for File Uploads
 When submitting settlement proof documents, always instantiate a standard `FormData` object and omit manual `Content-Type` headers so the browser automatically sets the correct boundary string:

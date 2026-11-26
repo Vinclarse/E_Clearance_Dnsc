@@ -40,7 +40,7 @@ Sign in with the account **username** and password. An email address works only 
 
 **Clearance officers** (`/signatory`) review the clearance items assigned to them.
 
-**Administrators** (`/admin`) can open the executive dashboard, clearance templates, student directory, signatory roles, audit logs, profile, and settings. Those screens still use sample data. They are not wired to the E-Clearance API, and the server does not yet restrict them to administrator accounts. Connect them to real endpoints and enforce permissions before using them with live records.
+**Administrators** (`/admin`) can open the executive dashboard, clearance templates, student directory, signatory roles, audit logs, profile, and settings. These screens are wired to the E-Clearance API (`portalApi.js` and `dashboardApi.js`) and enforce role-based access for school and institute admin accounts.
 
 ## Connecting to the API
 

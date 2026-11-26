@@ -61,7 +61,7 @@ pie title Feature Completion by System Flow
 | `[x]` | **BE / FE** | 6-Step Sequential Requirement Checklist | `StudentDashboard.jsx`, `MainContent.jsx`. | Fetches `student-clearances/my-clearances/` and paginates items. |
 | `[x]` | **BE / FE** | Deficiency Display (Remarks & Amount Due) | `MainContent.jsx`, `RequirementsSection.jsx`. | Renders callout box when status is `deficiency` / `has_issue`. |
 | `[x]` | **BE / FE** | Upload Settlement Proof File (`POST /upload-proof/`) | `ClearanceRequest.jsx` in `src/components/`. | Multipart form data with file validation ($\le 5\text{MB}$), notes, and Cloudinary upload. |
-| `[-]` | **BE / FE** | Item Status Transition to "Under Review" | Handled via frontend state mapping. | Backend DB schema uses `pending` / `has_issue`; needs standardized first-class enum. |
+| `[x]` | **BE** / `[-]` **FE** | Item Status Transition to "Under Review" | Backend `StudentClearanceItem.ItemStatus.UNDER_REVIEW` | Backend auto-moves items to `under_review` on proof upload/reply. Frontend should align to native enum. |
 | `[ ]` | **FE** | Cancel / Remove Uploaded Settlement Proof | Endpoint `DELETE /student-clearance-items/{id}/remove-proof/` exists in API. | Missing "Remove Proof" button on items currently under review. |
 | `[x]` | **BE / FE** | Student Profile & Avatar Upload | `ProfileSection.jsx` in `src/components/`. | Uploads avatar to Cloudinary via `PATCH /me/update/`. |
 | `[x]` | **BE / FE** | In-App Password Change | `ProfileSection.jsx` in `src/components/`. | Wired to `POST /users/change-password/`. |
@@ -75,7 +75,7 @@ pie title Feature Completion by System Flow
 | :---: | :---: | :--- | :--- | :--- |
 | `[x]` | **BE / FE** | Signatory Workload Overview Dashboard | `SIG1.jsx` in `src/signatory/`. | Wired to `student-clearance-items/signatory-dashboard/`. |
 | `[x]` | **BE / FE** | Clearance Approval Queue Table | `SIG2.jsx` in `src/signatory/`. | Search, filter by program/status, paginates student records. |
-| `[-]` | **FE** | Enforce Sequential Sign-off UI Lock | Rule 5.1 in `FRONTEND_INTEGRATION_GUIDE.md`. | **Critical Bug:** `SIG2.jsx` does not disable the Approve button when prior sequential steps are incomplete. Triggers backend 400. |
+| `[-]` | **FE** | Enforce Sequential Sign-off UI Lock | Rule 5.1 in `FRONTEND_INTEGRATION_GUIDE.md`. | **Action Needed:** `SIG2.jsx` must disable Approve button if prior steps are incomplete. Backend now enriches 400 error with `blocked_by`, `blocking_step`, and `blocking_item_id`. |
 | `[-]` | **FE** | Flag Deficiency Modal (`Modal SIG-3`) | Triggered from queue table. | **Defect:** `SIG2.jsx` currently flags item immediately on button click without prompting for `remarks` and `amount_due`. |
 | `[-]` | **FE** | Settlement Proof Document Viewer & Reject (`Modal SIG-4`) | `SIG3.jsx` in `src/signatory/`. | **Defect:** "Inspect Proof" clears item immediately. **No receipt image preview** and no "Reject Proof" workflow. |
 | `[x]` | **BE** | Asynchronous Deficiency Email Dispatch | Managed by backend Celery / mailer. | Sends email notice to student when an item is flagged. |
@@ -99,7 +99,7 @@ pie title Feature Completion by System Flow
 | :---: | :---: | :--- | :--- | :--- |
 | `[x]` | **BE** | Automatic Clearance Completion & Token Generation | Backend model signal / post-save hook. | Generates UUID `verification_token` when step 6 is cleared. |
 | `[x]` | **BE / FE** | Download Digital Clearance Certificate PDF | `DownloadClearance.jsx` in `src/components/`. | Streams PDF blob from `student-clearances/{id}/certificate/`. |
-| `[ ]` | **FE** | Public QR Code Verification Page (`Screen S-3`) | Public route `/verify/:token` specified in Blueprint. | **Missing:** QR scan opens raw API JSON endpoint (`/verify/{verification_token}/`). Needs dedicated React page. |
+| `[x]` | **BE** / `[ ]` **FE** | Public QR Code Verification Page (`Screen S-3`) | Dual-mode backend route `/verify/<token>/` & `/clearance/verify/<token>/`. | **Backend Complete:** Serves responsive DNSC `verify.html` for browsers (`Accept: text/html`) and JSON for API. Frontend QR code in `DownloadClearance.jsx` must target this URL. |
 | `[x]` | **BE** | Public Verification REST Endpoint | `GET /api/v1/student-clearances/verify/{token}/`. | Public endpoint returning authentication status, student details, and timestamp. |
 
 ---
@@ -112,4 +112,4 @@ pie title Feature Completion by System Flow
 | `[ ]` | **Cleanup** | `src/admin/pages/StubPage.css` | Delete unused stylesheet. |
 | `[ ]` | **Docs** | `README.md` | Update outdated text stating admin portal uses sample data. |
 | `[ ]` | **Architecture** | App-wide Routing | Refactor `App.jsx`, `StudentDashboard.jsx`, and `SignatoryApp.jsx` to unified `react-router-dom` routes. |
-| `[ ]` | **API Contract** | Status Nomenclature | Align `has_issue` -> `deficiency` and formalize `under_review` in backend enum. |
+| `[x]` | **API Contract** | Status Nomenclature | **Backend Complete:** `StudentClearanceItemWriteSerializer` accepts `'deficiency'` alias, and `under_review` is a first-class DB enum. |

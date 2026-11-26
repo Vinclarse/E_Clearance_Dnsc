@@ -3238,9 +3238,80 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/student-clearance-items/{id}/reply/:
+    post:
+      operationId: v1_student_clearance_items_reply_create
+      description: Alias for upload_proof to submit an explanatory reply or re-check
+        request without or with a file.
+      summary: Submit reply or request re-check for clearance item
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student clearance item.
+        required: true
+      tags:
+      - Student Clearance Item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentClearanceItemRead'
+          description: ''
+  /api/v1/student-clearance-items/{id}/request-recheck/:
+    post:
+      operationId: v1_student_clearance_items_request_recheck_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this student clearance item.
+        required: true
+      tags:
+      - Student Clearance Item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentClearanceItemRead'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentClearanceItemRead'
+          description: ''
   /api/v1/student-clearance-items/{id}/upload-proof/:
     post:
       operationId: v1_student_clearance_items_upload_proof_create
+      description: Allows a student (or clearance admin) to submit proof of compliance
+        (image/PDF attachment) and/or an explanatory reply/payment reference note
+        for a clearance item. At least one of file or proof_notes must be provided.
+      summary: Submit proof or reply/re-check note for clearance deficiency
       parameters:
       - in: path
         name: id
