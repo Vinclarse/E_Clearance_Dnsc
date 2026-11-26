@@ -114,12 +114,23 @@ function MobileNavigation({
     },
     {
       key: "track",
-      label: "Track Request",
+      label: "Tracker",
       match: ["track"],
       icon: (
         <>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
           <circle cx="12" cy="10" r="3"></circle>
+        </>
+      ),
+    },
+    {
+      key: "history",
+      label: "History",
+      match: ["history"],
+      icon: (
+        <>
+          <circle cx="12" cy="12" r="9"></circle>
+          <polyline points="12 7 12 12 15 15"></polyline>
         </>
       ),
     },

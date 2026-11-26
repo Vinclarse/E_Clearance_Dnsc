@@ -27,6 +27,7 @@ function ClearanceRequest({
   onUploadSuccess,
   onUploadTriggered,
   onUploadCompleted,
+  onRemoveProof,
   requestItemId,
   onRequestItemHandled,
 }) {
@@ -55,6 +56,12 @@ function ClearanceRequest({
     };
   });
   const selectedOffice = officeChoices.find((choice) => choice.id === String(activeSelectedItemId));
+  const selectedRawItem = requirements.find((item) => String(item.id) === String(activeSelectedItemId));
+  const selectedHasProof = Boolean(
+    selectedRawItem &&
+    (selectedRawItem.proof_attachment || selectedRawItem.proof_attachment_url || selectedRawItem.proof_uploaded_at) &&
+    String(selectedRawItem.status || "").toLowerCase() !== "cleared",
+  );
 
   const handleOfficeDropdownChange = (e) => {
     const itemId = e.target.value;
@@ -244,6 +251,42 @@ function ClearanceRequest({
                   </ul>
                 )}
               </div>
+              {selectedHasProof && onRemoveProof && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    backgroundColor: "#F5F8F2",
+                    border: "1px solid #D7E0CE",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    fontSize: "0.82rem",
+                    color: "#2c2d27",
+                  }}
+                >
+                  <span>A settlement proof is already submitted for this requirement.</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveProof(selectedRawItem)}
+                    style={{
+                      border: "1px solid #AA5757",
+                      backgroundColor: "#FFFFFF",
+                      color: "#AA5757",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remove Submitted Proof
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="file-upload-drag-area-aligned">

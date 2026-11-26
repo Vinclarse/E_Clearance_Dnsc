@@ -7,6 +7,7 @@ import MainContent from "../components/MainContent";
 import ProfileSection from "../components/ProfileSection";
 import ClearanceRequest from "../components/ClearanceRequest";
 import ClearanceTracker from "../components/ClearanceTracker";
+import ClearanceHistory from "../components/ClearanceHistory";
 import DownloadClearance from "../components/DownloadClearance";
 import apiClient from "../services/api";
 import PortalLoading from "../components/PortalLoading.jsx";
@@ -181,11 +182,16 @@ function StudentDashboard() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [customNotification, setCustomNotification] = useState(null);
   const [requirements, setRequirements] = useState(() => isDesignPreview ? previewRequirements : []);
-  const [clearanceRecord, setClearanceRecord] = useState(() => isDesignPreview ? previewClearance : null);
+  const [allClearances, setAllClearances] = useState(() => isDesignPreview ? [{ id: "preview-clearance", ...previewClearance }] : []);
+  const [clearanceRecord, setClearanceRecord] = useState(() => isDesignPreview ? { id: "preview-clearance", ...previewClearance } : null);
+  const [selectedClearanceId, setSelectedClearanceId] = useState(null);
   const [clearanceError, setClearanceError] = useState("");
   const [loadingClearance, setLoadingClearance] = useState(!isDesignPreview);
   const [reloadKey, setReloadKey] = useState(0);
   const [requestItemId, setRequestItemId] = useState(null);
+  const [removingProofItem, setRemovingProofItem] = useState(null);
+  const [isRemovingProof, setIsRemovingProof] = useState(false);
+  const [removeProofError, setRemoveProofError] = useState("");
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -229,7 +235,16 @@ function StudentDashboard() {
     apiClient.get("student-clearances/my-clearances/")
       .then(async (res) => {
         if (!isMounted) return;
-        const clearance = selectClearance(extractCollection(res.data).items);
+        const rawClearances = extractCollection(res.data).items.filter(isClearanceRecord);
+        const termedClearances = await Promise.all(rawClearances.map((entry) => withClearanceTerm(entry)));
+        if (!isMounted) return;
+
+        setAllClearances(termedClearances);
+        const matched = selectedClearanceId != null
+          ? termedClearances.find((entry) => String(entry.id) === String(selectedClearanceId))
+          : null;
+        const clearance = matched || selectClearance(termedClearances);
+
         if (!clearance) {
           setClearanceRecord(null);
           setRequirements([]);
@@ -240,12 +255,11 @@ function StudentDashboard() {
         const extractedItems = embeddedItems.length > 0
           ? embeddedItems
           : await fetchClearanceItems(clearance.id);
-        const termed = await withClearanceTerm(clearance);
         if (!isMounted) return;
         setClearanceRecord({
-          ...termed,
-          status: termed.status ?? termed.overall_status,
-          overall_status: termed.overall_status ?? termed.status,
+          ...clearance,
+          status: clearance.status ?? clearance.overall_status,
+          overall_status: clearance.overall_status ?? clearance.status,
         });
         setRequirements(
           extractedItems
@@ -272,7 +286,7 @@ function StudentDashboard() {
     return () => {
       isMounted = false;
     };
-  }, [isDesignPreview, reloadKey]);
+  }, [isDesignPreview, reloadKey, selectedClearanceId]);
 
   const handleAvatarStateChange = (newUrl) => {
     setAvatarPreview(newUrl);
@@ -319,6 +333,46 @@ function StudentDashboard() {
   const openProofRequest = (itemId) => {
     setRequestItemId(itemId);
     setCurrentTab("request");
+  };
+  const openRemoveProofModal = (item) => {
+    setRemovingProofItem(item);
+    setRemoveProofError("");
+  };
+  const closeRemoveProofModal = () => {
+    if (isRemovingProof) return;
+    setRemovingProofItem(null);
+    setRemoveProofError("");
+  };
+  const confirmRemoveProof = async () => {
+    if (!removingProofItem || isRemovingProof) return;
+    setIsRemovingProof(true);
+    setRemoveProofError("");
+    try {
+      await apiClient.delete(`student-clearance-items/${removingProofItem.id}/remove-proof/`);
+      const officeName = removingProofItem.requirement_name || "your requirement";
+      setCustomNotification({
+        id: `remove-proof-${Date.now()}`,
+        text: `Your submitted settlement proof for ${officeName} was removed.`,
+        type: "info",
+        time: "Just now",
+      });
+      setRemovingProofItem(null);
+      setLoadingClearance(true);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      const data = error?.response?.data;
+      const msg = data?.detail || data?.errors?.detail || (data?.message !== "Error" ? data?.message : "");
+      setRemoveProofError(typeof msg === "string" && msg.trim() ? msg : "Could not remove the submitted proof. Please try again.");
+    } finally {
+      setIsRemovingProof(false);
+    }
+  };
+  const handleSelectClearanceFromHistory = (record, targetTab = "dashboard") => {
+    if (record?.id != null && String(record.id) !== String(clearanceRecord?.id)) {
+      setLoadingClearance(true);
+      setSelectedClearanceId(record.id);
+    }
+    setCurrentTab(targetTab);
   };
   const clearRequestedItem = useCallback(() => setRequestItemId(null), []);
   const retryClearanceLoad = () => {
@@ -396,6 +450,7 @@ function StudentDashboard() {
             <MainContent
               requirements={requirements}
               onUploadProof={isDesignPreview ? undefined : openProofRequest}
+              onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
             />
           </div>
         ) : currentTab === "profile" ? (
@@ -413,6 +468,7 @@ function StudentDashboard() {
                   setClearanceError("");
                   setReloadKey((key) => key + 1);
                 }}
+                onRemoveProof={isDesignPreview ? undefined : openRemoveProofModal}
                 requestItemId={requestItemId}
                 onRequestItemHandled={clearRequestedItem}
               />
@@ -438,6 +494,14 @@ function StudentDashboard() {
               <span>Tracking details will appear when a clearance is assigned to your account.</span>
             </div>
           )
+        ) : currentTab === "history" ? (
+          <div className="dashboard-canvas-clearance-request-fix">
+            <ClearanceHistory
+              clearances={allClearances}
+              activeClearanceId={clearanceRecord?.id}
+              onSelectClearance={handleSelectClearanceFromHistory}
+            />
+          </div>
         ) : currentTab === "download" || currentTab === "clearance" ? (
           clearanceRecord ? (
             <div className="dashboard-canvas-clearance-request-fix">
@@ -455,6 +519,41 @@ function StudentDashboard() {
           </div>
         )}
       </main>
+      {removingProofItem && (
+        <div className="profile-avatar-modal-overlay" onClick={closeRemoveProofModal}>
+          <div className="profile-avatar-modal-card-box" onClick={(event) => event.stopPropagation()}>
+            <h4>Remove Submitted Proof</h4>
+            <p>
+              Remove your uploaded settlement proof for{" "}
+              <strong>{removingProofItem.requirement_name || "this requirement"}</strong>? You can upload a new receipt afterward.
+            </p>
+            {removeProofError && (
+              <p role="alert" style={{ color: "#AA5757", fontWeight: 600, fontSize: "0.84rem" }}>
+                {removeProofError}
+              </p>
+            )}
+            <div className="profile-avatar-modal-actions-row">
+              <button
+                type="button"
+                className="submit-request-form-btn-cancel"
+                onClick={closeRemoveProofModal}
+                disabled={isRemovingProof}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="submit-request-form-btn-aligned"
+                style={{ backgroundColor: "#AA5757" }}
+                onClick={confirmRemoveProof}
+                disabled={isRemovingProof}
+              >
+                {isRemovingProof ? "Removing…" : "Remove Proof"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
