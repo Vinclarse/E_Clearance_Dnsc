@@ -5,6 +5,7 @@ import { fetchCurrentUser } from "../services/account.js";
 import { publishAccount, subscribePortalRefresh } from "../services/portalRefresh.js";
 import PasswordInput from "./PasswordInput.jsx";
 import PortalLoading from "./PortalLoading.jsx";
+import EmailChangeCard from "./EmailChangeCard.jsx";
 import "../admin/pages/Profile.css";
 
 function profileImage(profile) {
@@ -361,6 +362,15 @@ export default function ProfileSection({ onAvatarUpdated }) {
               </button>
             </div>
           </form>
+
+          <EmailChangeCard
+            currentEmail={profile?.email || ""}
+            onEmailUpdated={async () => {
+              const refreshed = await fetchCurrentUser({ fresh: true });
+              setProfile(refreshed);
+              publishAccount(refreshed);
+            }}
+          />
         </div>
       </div>
     </div>
