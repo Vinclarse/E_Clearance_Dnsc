@@ -80,8 +80,8 @@ export async function fetchCurrentAdmin(config) {
 async function fetchItemsByStatus(status) {
   const items = [];
   let page = 1;
-  let pages = 1;
-  let total = 0;
+  let pages;
+  let total;
 
   do {
     const response = await apiClient.get("student-clearance-items/", {
