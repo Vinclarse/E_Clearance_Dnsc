@@ -10,6 +10,7 @@ import {
   fetchUsers,
 } from "../services/portalApi.js";
 import PortalLoading from "../../components/PortalLoading.jsx";
+import { isAdminAccount, isSuperuserAccount } from "../../services/account.js";
 import "./SignatoryRoles.css";
 
 const SIGNATORY_ORDER = ["Librarians", "Cashiers", "Advisers", "Program Chairs", "Governors", "Deans"];
@@ -119,11 +120,13 @@ export default function SignatoryRoles() {
       fetchUsers({
         search: userQuery.trim() || undefined,
         is_staff: true,
-        per_page: 8,
+        per_page: 20,
         current_page: 1,
       })
         .then((result) => {
-          if (!cancelled) setCandidates(result.items);
+          if (!cancelled) {
+            setCandidates(result.items.filter((user) => !isAdminAccount(user) && !isSuperuserAccount(user)));
+          }
         })
         .catch(() => {
           if (!cancelled) setCandidates([]);
@@ -141,6 +144,10 @@ export default function SignatoryRoles() {
     setError("");
     try {
       const user = await fetchUser(userId);
+      if (isAdminAccount(user) || isSuperuserAccount(user)) {
+        setError("Admin and superadmin accounts cannot be assigned to signatory roles.");
+        return;
+      }
       const existing = roleNames(user);
       const rolesToSend = existing.includes(selected.name) ? existing : [...existing, selected.name];
       await assignRoles(userId, rolesToSend);
@@ -231,7 +238,7 @@ export default function SignatoryRoles() {
                 />
                 <div className="sr2-candidate-list">
                   {candidates.length === 0 ? (
-                    <p>No matching users.</p>
+                    <p>No eligible non-admin staff users match.</p>
                   ) : (
                     candidates.map((user) => (
                       <button key={user.id} type="button" disabled={assigning} onClick={() => assignUser(user.id)}>
@@ -241,6 +248,9 @@ export default function SignatoryRoles() {
                     ))
                   )}
                 </div>
+                <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#555f4a" }}>
+                  Admin and superadmin accounts are excluded so role privileges stay separated.
+                </p>
               </div>
             )}
 

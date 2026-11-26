@@ -49,9 +49,9 @@ export function isSignatoryAccount(profile) {
 }
 
 export function accountKindFor(profile) {
-  if (isSignatoryAccount(profile)) return "signatory";
-  if (isAdminAccount(profile)) return "admin";
   if (isSuperuserAccount(profile)) return "unsupported";
+  if (isAdminAccount(profile)) return "admin";
+  if (isSignatoryAccount(profile)) return "signatory";
   return "student";
 }
 

@@ -8,6 +8,8 @@ import SignatoryApp from "../signatory/SignatoryApp.jsx";
 import ClearanceTemplates from "../admin/pages/ClearanceTemplates.jsx";
 import ExecutiveDashboard from "../admin/pages/ExecutiveDashboard.jsx";
 import ProfileSection from "../components/ProfileSection.jsx";
+import SignatoryRoles from "../admin/pages/SignatoryRoles.jsx";
+import { accountKindFor, homePathForAccount } from "../services/account.js";
 import { createMockBackend } from "./mockServer.js";
 
 describe("E-Clearance DNSC End-to-End User Flows", () => {
@@ -276,6 +278,37 @@ describe("E-Clearance DNSC End-to-End User Flows", () => {
     await user.click(screen.getByRole("button", { name: /Cancel/i }));
     await waitFor(() => {
       expect(screen.getByText(/Email change request cancelled/i)).toBeInTheDocument();
+    });
+  });
+
+  it("Flow 6: Keeps Admin priority over Signatory routing and blocks assigning Admin/Superadmin accounts as signatories", async () => {
+    const user = userEvent.setup();
+    const dualRoleAdmin = {
+      id: 30,
+      username: "dnsc_ic_admin",
+      groups: ["Institute Admins", "Librarians"],
+      is_superuser: false,
+    };
+    expect(accountKindFor(dualRoleAdmin)).toBe("admin");
+    expect(homePathForAccount(dualRoleAdmin)).toBe("/admin");
+
+    backend.currentUserKey = "admin";
+    render(<SignatoryRoles />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Assign Staff/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /Assign Staff/i }));
+    await waitFor(() => {
+      expect(screen.getByText("staff_library")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("dnsc_ic_admin")).not.toBeInTheDocument();
+    expect(screen.queryByText("superadmin")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /staff_library/i }));
+    await waitFor(() => {
+      expect(backend.users.staffCandidate.groups).toContain("Librarians");
     });
   });
 });

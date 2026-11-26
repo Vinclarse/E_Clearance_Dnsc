@@ -38,6 +38,27 @@ export function createMockBackend() {
         is_superuser: false,
         institute: { id: 1, institute_name: "Institute of Computing" },
       },
+      staffCandidate: {
+        id: 21,
+        username: "staff_library",
+        email: "staff.library@dnsc.edu.ph",
+        first_name: "Elena",
+        last_name: "Staff",
+        groups: [],
+        is_staff: true,
+        is_superuser: false,
+        institute: { id: 1, institute_name: "Institute of Computing" },
+      },
+      superadmin: {
+        id: 40,
+        username: "superadmin",
+        email: "superadmin@dnsc.edu.ph",
+        first_name: "Super",
+        last_name: "Admin",
+        groups: [],
+        is_staff: true,
+        is_superuser: true,
+      },
     },
     roles: [
       { id: 1, name: "Librarians" },
@@ -323,7 +344,36 @@ export function createMockBackend() {
       });
     }
 
-    // Clearance Roles & Types
+    // Clearance Roles, Access Roles & Users
+    if (method === "get" && cleanUrl === "access/roles/") {
+      return makeResponse(config, 200, state.roles.map((r) => ({ ...r, group_id: r.id, member_count: 1, description: r.name })));
+    }
+    if (method === "get" && cleanUrl === "users/") {
+      const allUsers = Object.values(state.users);
+      let filtered = allUsers;
+      if (config.params?.group_name) {
+        const grp = String(config.params.group_name).toLowerCase();
+        filtered = filtered.filter((u) => (u.groups || []).some((g) => String(g).toLowerCase() === grp));
+      }
+      if (config.params?.is_staff) {
+        filtered = filtered.filter((u) => u.is_staff || (u.groups || []).some((g) => g !== "Students"));
+      }
+      if (config.params?.search) {
+        const q = String(config.params.search).toLowerCase();
+        filtered = filtered.filter((u) => u.username.toLowerCase().includes(q) || `${u.first_name} ${u.last_name}`.toLowerCase().includes(q));
+      }
+      return makeResponse(config, 200, { results: filtered, total_items: filtered.length, total_pages: 1, current_page: 1 });
+    }
+    const userDetailMatch = cleanUrl.match(/^users\/(\d+)\/$/);
+    if (method === "get" && userDetailMatch) {
+      const found = Object.values(state.users).find((u) => u.id === Number(userDetailMatch[1]));
+      return makeResponse(config, 200, found || null);
+    }
+    if (method === "post" && cleanUrl === "access/assign/") {
+      const target = Object.values(state.users).find((u) => u.id === Number(body.user_id));
+      if (target) target.groups = body.roles;
+      return makeResponse(config, 200, { user_id: body.user_id, roles: body.roles });
+    }
     if (method === "get" && cleanUrl === "clearance-roles/") {
       return makeResponse(config, 200, { results: state.roles, total_items: state.roles.length, total_pages: 1, current_page: 1 });
     }
