@@ -97,14 +97,20 @@ async function fetchItemsByStatus(status) {
   return { items, total };
 }
 
-export async function fetchOfficeBacklog() {
+export async function fetchOfficeBacklog(requirementIds = null) {
   const [pending, issues] = await Promise.all([
     fetchItemsByStatus("pending"),
     fetchItemsByStatus("has_issue"),
   ]);
+  const allowedReqs = requirementIds && requirementIds.size > 0 ? requirementIds : null;
   const offices = new Map();
+  let pendingFilteredTotal = 0;
+  let issueFilteredTotal = 0;
 
   function add(item, field) {
+    if (allowedReqs && !allowedReqs.has(Number(item?.requirement_id))) return;
+    if (field === "pending") pendingFilteredTotal += 1;
+    else issueFilteredTotal += 1;
     const office =
       displayApiText(item?.authorizing_role_name) ||
       displayApiText(item?.requirement_name) ||
@@ -123,8 +129,8 @@ export async function fetchOfficeBacklog() {
 
   return {
     rows,
-    pendingTotal: pending.total,
-    issueTotal: issues.total,
+    pendingTotal: allowedReqs ? pendingFilteredTotal : pending.total,
+    issueTotal: allowedReqs ? issueFilteredTotal : issues.total,
   };
 }
 
