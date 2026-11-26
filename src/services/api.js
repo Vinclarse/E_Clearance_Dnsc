@@ -128,7 +128,7 @@ apiClient.interceptors.response.use(
 
     if (!refreshToken) {
       localStorage.removeItem("auth_token");
-      if (window.location.pathname === "/dashboard") {
+      if (window.location.pathname === "/dashboard" || window.location.pathname.startsWith("/student")) {
         window.location.replace("/login");
       }
       return Promise.reject(error);
@@ -159,7 +159,7 @@ apiClient.interceptors.response.use(
     } catch (refreshError) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_refresh_token");
-      if (window.location.pathname === "/dashboard") {
+      if (window.location.pathname === "/dashboard" || window.location.pathname.startsWith("/student")) {
         window.location.replace("/login");
       }
       return Promise.reject(refreshError);

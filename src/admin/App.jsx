@@ -20,6 +20,7 @@ export default function App() {
       <Navbar />
       <Routes key={refreshKey}>
         <Route path="/" element={<ExecutiveDashboard />} />
+        <Route path="/dashboard" element={<ExecutiveDashboard />} />
         <Route path="/clearance-templates" element={<ClearanceTemplates />} />
         <Route path="/student-directory" element={<StudentDirectory />} />
         <Route path="/signatory-roles" element={<SignatoryRoles />} />

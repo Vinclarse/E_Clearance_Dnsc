@@ -936,8 +936,8 @@ function App() {
     () => window.location.pathname.replace(/\/+$/, '') || '/',
   )
   const isLoginPage = currentPath === '/login'
-  const isForgotPasswordPage = currentPath === '/forgot-password'
-  const isDashboardPage = currentPath === '/dashboard'
+  const isForgotPasswordPage = currentPath === '/forgot-password' || currentPath === '/password-reset'
+  const isDashboardPage = currentPath === '/dashboard' || currentPath === '/student' || currentPath.startsWith('/student/')
   const isAdminPage = currentPath === '/admin' || currentPath.startsWith('/admin/')
   const isSignatoryPage = currentPath === '/signatory' || currentPath.startsWith('/signatory/')
   const hasAuthToken = Boolean(localStorage.getItem('auth_token'))
