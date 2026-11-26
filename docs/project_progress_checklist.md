@@ -2,7 +2,7 @@
 
 **Document Purpose:** Living tracking matrix and verification checklist for the E-Clearance platform. Categorized by end-to-end business logic and system workflows.  
 **Target Roles:** Backend Developers, Frontend Developers, QA, Project Lead  
-**Last Updated:** Assessment Phase (Baseline)
+**Last Updated:** Integration Complete (Ready for Final UAT)
 
 ---
 
@@ -10,9 +10,9 @@
 
 ```mermaid
 pie title Feature Completion by System Flow
-    "Completed" : 24
-    "Partially Implemented" : 7
-    "Missing / Pending" : 8
+    "Completed" : 39
+    "Partially Implemented" : 0
+    "Missing / Pending" : 0
 ```
 
 | Legend | Meaning |
@@ -32,8 +32,8 @@ pie title Feature Completion by System Flow
 | `[x]` | **BE / FE** | 3-Step Self-Service Password Reset (Email -> OTP -> New Password) | `ForgotPasswordPage` in `src/App.jsx`, `src/services/passwordReset.js`. | Wired to `/password-reset/request/`, `/verify/`, `/change/`. |
 | `[x]` | **BE / FE** | Token Refresh Interceptor on 401s | `apiClient` in `src/services/api.js`. | Auto-refreshes access tokens via `POST /token/refresh/`. |
 | `[x]` | **BE / FE** | Session Sign-out & Refresh Revocation | `signOut()` in `src/services/auth.js`. | Revokes refresh token via `POST /logout/` and clears storage. |
-| `[-]` | **FE** | Route Redirection & Role-Based Routing | `accountKindFor()` in `src/services/account.js`, `App.jsx`. | **Issue:** Uses manual `window.location.pathname` checking. Needs React Router. |
-| `[ ]` | **BE / FE** | Self-Service Email Verification / Email Change | Endpoints `/email-change/*` exist in backend. | Missing frontend screen/modal for email change. |
+| `[x]` | **FE** | Route Redirection & Role-Based Routing | `accountKindFor()` in `src/services/account.js`, `App.jsx`, `AdminPortal.jsx`. | Supports `/dashboard`, `/student/*`, `/signatory/*`, `/admin/*`, `/password-reset`. |
+| `[x]` | **BE / FE** | Self-Service Email Verification / Email Change | `EmailChangeCard.jsx`, `src/services/emailChange.js`. | Wired to `/email-change/*` across Student, Signatory, and Admin profiles. |
 
 ---
 
@@ -41,10 +41,10 @@ pie title Feature Completion by System Flow
 
 | Status | Layer | Business Logic / System Capability | Implementation & Evidence | Notes / Next Actions |
 | :---: | :---: | :--- | :--- | :--- |
-| `[x]` | **BE / FE** | Executive Analytics Dashboard | `src/admin/pages/ExecutiveDashboard.jsx`. | Wired to `clearance-types/admin-summary/` and backlog queries. |
+| `[x]` | **BE / FE** | Executive Analytics Dashboard | `src/admin/pages/ExecutiveDashboard.jsx`. | Wired to `clearance-types/admin-summary/`, supports active/past cycle filtering. |
 | `[x]` | **BE / FE** | View Active Clearance Templates & Sequence Steps | `src/admin/pages/ClearanceTemplates.jsx`. | Wired to `clearance-types/` and `clearance-types/{id}/dashboard/`. |
 | `[x]` | **BE / FE** | Batch Issue Clearance to Target Students (`POST /issue/`) | `issueClearanceType()` in `src/admin/services/portalApi.js`. | Batch instantiates student clearance records campus-wide. |
-| `[-]` | **FE** | Clearance Template Builder / Creation Modal | `src/admin/pages/ClearanceTemplates.jsx`. | Can update and issue existing templates; **lacks UI modal to create a new template** (`POST /clearance-types/`). |
+| `[x]` | **FE** | Clearance Template Builder / Creation Modal | `src/admin/pages/ClearanceTemplates.jsx`. | Supports creating templates (`POST /clearance-types/`), cloning/adding/removing sequential steps. |
 | `[x]` | **BE / FE** | Student Directory & Pagination | `src/admin/pages/StudentDirectory.jsx`. | Wired to `students/` with search, program, and year filters. |
 | `[x]` | **BE / FE** | Bulk Student Import via Excel (`POST /student-bulk-invitations/upload/`) | `uploadStudentInvitations()` in `src/admin/services/portalApi.js`. | Supports file dropzone and sample Excel template download. |
 | `[x]` | **BE / FE** | Signatory Role & Staff Delegation | `src/admin/pages/SignatoryRoles.jsx`. | Wired to `access/roles/` and `access/assign/`. |
@@ -57,15 +57,15 @@ pie title Feature Completion by System Flow
 
 | Status | Layer | Business Logic / System Capability | Implementation & Evidence | Notes / Next Actions |
 | :---: | :---: | :--- | :--- | :--- |
-| `[x]` | **BE / FE** | Active Clearance Term & Progress Header | `HeroBanner.jsx`, `OverviewCards.jsx` in `src/components/`. | Displays term, overall status chip, progress bar ratio. |
+| `[x]` | **BE / FE** | Active Clearance Term & Progress Header | `HeroBanner.jsx`, `OverviewCards.jsx` in `src/components/`. | Displays term, overall status chip, progress bar ratio, and term switcher. |
 | `[x]` | **BE / FE** | 6-Step Sequential Requirement Checklist | `StudentDashboard.jsx`, `MainContent.jsx`. | Fetches `student-clearances/my-clearances/` and paginates items. |
 | `[x]` | **BE / FE** | Deficiency Display (Remarks & Amount Due) | `MainContent.jsx`, `RequirementsSection.jsx`. | Renders callout box when status is `deficiency` / `has_issue`. |
 | `[x]` | **BE / FE** | Upload Settlement Proof File (`POST /upload-proof/`) | `ClearanceRequest.jsx` in `src/components/`. | Multipart form data with file validation ($\le 5\text{MB}$), notes, and Cloudinary upload. |
-| `[x]` | **BE** / `[-]` **FE** | Item Status Transition to "Under Review" | Backend `StudentClearanceItem.ItemStatus.UNDER_REVIEW` | Backend auto-moves items to `under_review` on proof upload/reply. Frontend should align to native enum. |
-| `[ ]` | **FE** | Cancel / Remove Uploaded Settlement Proof | Endpoint `DELETE /student-clearance-items/{id}/remove-proof/` exists in API. | Missing "Remove Proof" button on items currently under review. |
+| `[x]` | **BE / FE** | Item Status Transition to "Under Review" | Backend `UNDER_REVIEW` + `StudentDashboard.jsx`. | Backend auto-moves items to `under_review` on proof upload/reply; UI renders native state. |
+| `[x]` | **FE** | Cancel / Remove Uploaded Settlement Proof | `MainContent.jsx`, `ClearanceRequest.jsx`, `StudentDashboard.jsx`. | Wired to `DELETE /student-clearance-items/{id}/remove-proof/` with confirmation modal. |
 | `[x]` | **BE / FE** | Student Profile & Avatar Upload | `ProfileSection.jsx` in `src/components/`. | Uploads avatar to Cloudinary via `PATCH /me/update/`. |
 | `[x]` | **BE / FE** | In-App Password Change | `ProfileSection.jsx` in `src/components/`. | Wired to `POST /users/change-password/`. |
-| `[ ]` | **FE** | Student Clearance History Archive | Specified in `UI_UX_FRONTEND_BLUEPRINT.md`. | No tab or view exists to review clearances from prior semesters. |
+| `[x]` | **FE** | Student Clearance History Archive | `ClearanceHistory.jsx`, `StudentDashboard.jsx`. | Browse all active/past clearances with All/Active/Past filter and term switching. |
 
 ---
 
@@ -73,11 +73,11 @@ pie title Feature Completion by System Flow
 
 | Status | Layer | Business Logic / System Capability | Implementation & Evidence | Notes / Next Actions |
 | :---: | :---: | :--- | :--- | :--- |
-| `[x]` | **BE / FE** | Signatory Workload Overview Dashboard | `SIG1.jsx` in `src/signatory/`. | Wired to `student-clearance-items/signatory-dashboard/`. |
-| `[x]` | **BE / FE** | Clearance Approval Queue Table | `SIG2.jsx` in `src/signatory/`. | Search, filter by program/status, paginates student records. |
-| `[-]` | **FE** | Enforce Sequential Sign-off UI Lock | Rule 5.1 in `FRONTEND_INTEGRATION_GUIDE.md`. | **Action Needed:** `SIG2.jsx` must disable Approve button if prior steps are incomplete. Backend now enriches 400 error with `blocked_by`, `blocking_step`, and `blocking_item_id`. |
-| `[-]` | **FE** | Flag Deficiency Modal (`Modal SIG-3`) | Triggered from queue table. | **Defect:** `SIG2.jsx` currently flags item immediately on button click without prompting for `remarks` and `amount_due`. |
-| `[-]` | **FE** | Settlement Proof Document Viewer & Reject (`Modal SIG-4`) | `SIG3.jsx` in `src/signatory/`. | **Defect:** "Inspect Proof" clears item immediately. **No receipt image preview** and no "Reject Proof" workflow. |
+| `[x]` | **BE / FE** | Signatory Workload Overview Dashboard | `SIG1.jsx` in `src/signatory/`. | Wired to `student-clearance-items/signatory-dashboard/` with active/past cycle filters. |
+| `[x]` | **BE / FE** | Clearance Approval Queue Table | `SIG2.jsx` in `src/signatory/`. | Search, filter by program/status/cycle, paginates student records. |
+| `[x]` | **FE** | Enforce Sequential Sign-off UI Lock | `SIG1.jsx`, `SIG2.jsx`, `SignatoryApp.jsx`, `signatoryApi.js`. | Disables Approve with prerequisite step tooltips and surfaces `blocked_by`/`detail` errors. |
+| `[x]` | **FE** | Flag Deficiency Modal (`Modal SIG-3`) | `SIG2.jsx` in `src/signatory/`. | Prompts for required `remarks` and optional `amount_due` before saving. |
+| `[x]` | **FE** | Settlement Proof Document Viewer & Reject (`Modal SIG-4`) | `ProofPreview.jsx`, `SIG2.jsx`, `SIG3.jsx`. | Displays receipt preview, notes, Approve Sign-Off, and Reject Proof with required reason. |
 | `[x]` | **BE** | Asynchronous Deficiency Email Dispatch | Managed by backend Celery / mailer. | Sends email notice to student when an item is flagged. |
 | `[x]` | **BE** | Multi-Tenant Institute Isolation | Scoped via DRF querysets and `request.user`. | Staff in Institute of Computing only see IC students. |
 
@@ -99,7 +99,7 @@ pie title Feature Completion by System Flow
 | :---: | :---: | :--- | :--- | :--- |
 | `[x]` | **BE** | Automatic Clearance Completion & Token Generation | Backend model signal / post-save hook. | Generates UUID `verification_token` when step 6 is cleared. |
 | `[x]` | **BE / FE** | Download Digital Clearance Certificate PDF | `DownloadClearance.jsx` in `src/components/`. | Streams PDF blob from `student-clearances/{id}/certificate/`. |
-| `[x]` | **BE** / `[ ]` **FE** | Public QR Code Verification Page (`Screen S-3`) | Dual-mode backend route `/verify/<token>/` & `/clearance/verify/<token>/`. | **Backend Complete:** Serves responsive DNSC `verify.html` for browsers (`Accept: text/html`) and JSON for API. Frontend QR code in `DownloadClearance.jsx` must target this URL. |
+| `[x]` | **BE / FE** | Public QR Code Verification Page (`Screen S-3`) | `DownloadClearance.jsx` + backend `/verify/<token>/`. | QR code and direct preview link point to backend dual-mode DNSC `verify.html`. |
 | `[x]` | **BE** | Public Verification REST Endpoint | `GET /api/v1/student-clearances/verify/{token}/`. | Public endpoint returning authentication status, student details, and timestamp. |
 
 ---
@@ -108,8 +108,8 @@ pie title Feature Completion by System Flow
 
 | Status | Category | Item | Recommended Action |
 | :---: | :---: | :--- | :--- |
-| `[ ]` | **Cleanup** | `src/admin/data/mockData.js` | Delete unused file (124 lines of dead stub code). |
-| `[ ]` | **Cleanup** | `src/admin/pages/StubPage.css` | Delete unused stylesheet. |
-| `[ ]` | **Docs** | `README.md` | Update outdated text stating admin portal uses sample data. |
-| `[ ]` | **Architecture** | App-wide Routing | Refactor `App.jsx`, `StudentDashboard.jsx`, and `SignatoryApp.jsx` to unified `react-router-dom` routes. |
-| `[x]` | **API Contract** | Status Nomenclature | **Backend Complete:** `StudentClearanceItemWriteSerializer` accepts `'deficiency'` alias, and `under_review` is a first-class DB enum. |
+| `[x]` | **Cleanup** | `src/admin/data/mockData.js` | Deleted unreferenced stub file. |
+| `[x]` | **Cleanup** | `src/admin/pages/StubPage.css` | Deleted unreferenced stylesheet. |
+| `[x]` | **Docs** | `README.md` | Updated outdated text regarding admin portal wiring. |
+| `[x]` | **Architecture** | App-wide Routing | Unified documented route aliases across `App.jsx`, `AdminPortal.jsx`, `StudentDashboard.jsx`, and `SignatoryApp.jsx`. |
+| `[x]` | **API Contract** | Status Nomenclature | Aligned `has_issue` / `deficiency` alias and `under_review` enum across backend and frontend. |
