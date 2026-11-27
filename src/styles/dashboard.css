@@ -678,6 +678,11 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 .dashboard-container .file-upload-drag-area-aligned:hover {
 background-color: rgba(255, 255, 255, 0.85);
 }
+.dashboard-container .file-upload-drag-area-aligned.is-drag-over {
+background-color: #f4f7ef;
+outline: 2px dashed #2d3a1e;
+outline-offset: -10px;
+}
 .dashboard-container .hidden-file-input-completely {
 display: none !important;
 width: 0 !important;
