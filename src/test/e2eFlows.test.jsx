@@ -110,15 +110,15 @@ describe("E-Clearance DNSC End-to-End User Flows", () => {
     await user.click(screen.getAllByText("Dashboard")[0]);
     await waitFor(() => {
       expect(screen.getByText(/Overdue book: Database Systems/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Upload proof of settlement/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Reply and request re-check/i })).toBeInTheDocument();
     });
-    await user.click(screen.getByRole("button", { name: /Upload proof of settlement/i }));
+    await user.click(screen.getByRole("button", { name: /Reply and request re-check/i }));
 
     const fileInput = document.getElementById("clearance-file-input");
     const receipt = new File(["receipt-bytes"], "receipt.png", { type: "image/png" });
     await user.upload(fileInput, receipt);
-    await user.type(screen.getByPlaceholderText(/GCash Reference Number/i), "GCash Ref 555666");
-    await user.click(screen.getByRole("button", { name: /Submit Clearance File/i }));
+    await user.type(screen.getByPlaceholderText(/Paid 150 PHP via GCash/i), "GCash Ref 555666");
+    await user.click(screen.getByRole("button", { name: /Send reply and request re-check/i }));
     await user.click(screen.getByRole("button", { name: /Confirm Submit/i }));
 
     await waitFor(() => {
@@ -136,6 +136,21 @@ describe("E-Clearance DNSC End-to-End User Flows", () => {
 
     await waitFor(() => {
       expect(backend.items.find((i) => i.id === 6001).proof_attachment).toBeNull();
+    });
+
+    await user.click(screen.getAllByText("Dashboard")[0]);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Reply and request re-check/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /Reply and request re-check/i }));
+    await user.type(screen.getByPlaceholderText(/Paid 150 PHP via GCash/i), "Paid 150 PHP via GCash Ref 1029384756");
+    await user.click(screen.getByRole("button", { name: /Send reply and request re-check/i }));
+    await user.click(screen.getByRole("button", { name: /Confirm Submit/i }));
+    await waitFor(() => {
+      const item = backend.items.find((i) => i.id === 6001);
+      expect(item.status).toBe("under_review");
+      expect(item.proof_notes).toBe("Paid 150 PHP via GCash Ref 1029384756");
+      expect(item.proof_attachment).toBeNull();
     });
   });
 

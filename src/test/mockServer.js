@@ -590,15 +590,23 @@ export function createMockBackend() {
       return makeResponse(config, 200, item);
     }
 
-    const uploadProofMatch = cleanUrl.match(/^student-clearance-items\/(\d+)\/upload-proof\/$/);
-    if (method === "post" && uploadProofMatch) {
-      const item = state.items.find((i) => i.id === Number(uploadProofMatch[1]));
+    const proofMatch = cleanUrl.match(/^student-clearance-items\/(\d+)\/(?:upload-proof|reply)\/$/);
+    if (method === "post" && proofMatch) {
+      const item = state.items.find((i) => i.id === Number(proofMatch[1]));
       if (!item) return makeResponse(config, 404, { detail: "Not found" });
+      const note = typeof body.proof_notes === "string" ? body.proof_notes.trim() : "";
+      const hasFile = Boolean(body.file || body.proof_attachment);
+      if (!note && !hasFile) {
+        return makeResponse(config, 400, { detail: "Provide a file or proof_notes." });
+      }
       item.status = "under_review";
-      item.proof_attachment = "https://res.cloudinary.com/ubxjjws9/image/upload/v1/receipt.jpg";
-      item.proof_attachment_url = item.proof_attachment;
-      item.proof_notes = body.proof_notes || "GCash Ref 90123456";
-      item.proof_uploaded_at = "2026-11-26T12:05:00Z";
+      if (hasFile) {
+        item.proof_attachment = "https://res.cloudinary.com/ubxjjws9/image/upload/v1/receipt.jpg";
+        item.proof_attachment_url = item.proof_attachment;
+        item.proof_uploaded_at = "2026-11-26T12:05:00Z";
+      }
+      if (note) item.proof_notes = note;
+      else if (hasFile && !item.proof_notes) item.proof_notes = "GCash Ref 90123456";
       refreshOverallStatus(item.student_clearance_id);
       return makeResponse(config, 200, item);
     }

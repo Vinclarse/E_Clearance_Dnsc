@@ -1,6 +1,15 @@
 import { useState } from "react";
 import apiClient from "../services/api";
 
+function itemStatus(item) {
+  return String(item?.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function isDeficiencyReply(item) {
+  const status = itemStatus(item);
+  return status === "deficiency" || status === "has_issue";
+}
+
 function uploadErrorMessage(error) {
   const responseData = error.response?.data;
   const errorData = responseData?.data ?? responseData;
@@ -43,6 +52,8 @@ function ClearanceRequest({
   // NEW: success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successOfficeName, setSuccessOfficeName] = useState("");
+  const [successWasReply, setSuccessWasReply] = useState(false);
+  const [successIncludedFile, setSuccessIncludedFile] = useState(false);
   const activeSelectedItemId = requestItemId ?? selectedItemId;
   const officeChoices = requirements.map((item, index) => {
     const isCleared = item.status && item.status.toLowerCase() === "cleared";
@@ -58,6 +69,7 @@ function ClearanceRequest({
   });
   const selectedOffice = officeChoices.find((choice) => choice.id === String(activeSelectedItemId));
   const selectedRawItem = requirements.find((item) => String(item.id) === String(activeSelectedItemId));
+  const replyingToIssue = isDeficiencyReply(selectedRawItem);
   const selectedHasProof = Boolean(
     selectedRawItem &&
     (selectedRawItem.proof_attachment || selectedRawItem.proof_attachment_url || selectedRawItem.proof_uploaded_at) &&
@@ -142,16 +154,26 @@ function ClearanceRequest({
 
   const handlePreSubmitCheck = (e) => {
     e.preventDefault();
-    if (!activeSelectedItemId || !fileAttachment || isUploading) return;
+    if (!activeSelectedItemId || isUploading) return;
 
     const selectedOffice = requirements.find(item => item.id === parseInt(activeSelectedItemId));
     if (!selectedOffice || selectedOffice.is_actionable === false) {
       setUploadStatus("SELECT AN ACTIONABLE REQUIREMENT");
       return;
     }
-    const currentStatus = selectedOffice?.status ? selectedOffice.status.toLowerCase() : "";
+    const reply = isDeficiencyReply(selectedOffice);
+    const note = notesText.trim();
+    if (reply) {
+      if (!note && !fileAttachment) {
+        setUploadStatus("ADD A REPLY OR AN IMAGE");
+        return;
+      }
+    } else if (!fileAttachment) {
+      return;
+    }
+    const currentStatus = itemStatus(selectedOffice);
 
-    if (currentStatus === "deficiency" || currentStatus === "under_review") {
+    if (reply || currentStatus === "under_review") {
       setShowReSubmitModal(true);
     } else {
       executeFormUpload();
@@ -159,38 +181,51 @@ function ClearanceRequest({
   };
 
   // NEW: shared success handler (used by both .then and .catch below)
-  const handleUploadComplete = (officeName, updatedItem) => {
-    setUploadStatus("UPLOAD SUCCESSFUL");
-    if (onUploadTriggered) onUploadTriggered(officeName);
+  const handleUploadComplete = (officeName, updatedItem, reply) => {
+    setUploadStatus(reply ? "REPLY SENT" : "UPLOAD SUCCESSFUL");
+    if (onUploadTriggered) onUploadTriggered(officeName, { reply });
     if (onUploadSuccess && typeof updatedItem?.status === "string") {
       onUploadSuccess(activeSelectedItemId, updatedItem);
     }
     onUploadCompleted?.();
     setSuccessOfficeName(officeName);
+    setSuccessWasReply(Boolean(reply));
+    setSuccessIncludedFile(Boolean(fileAttachment));
     resetForm();
-    setUploadStatus("UPLOAD SUCCESSFUL");
+    setUploadStatus(reply ? "REPLY SENT" : "UPLOAD SUCCESSFUL");
     setShowSuccessModal(true);
   };
 
   const executeFormUpload = () => {
-    if (isUploading || !activeSelectedItemId || !fileAttachment) return;
+    const selectedOffice = requirements.find(item => item.id === parseInt(activeSelectedItemId));
+    const reply = isDeficiencyReply(selectedOffice);
+    const note = notesText.trim();
+    if (isUploading || !activeSelectedItemId) return;
+    if (reply) {
+      if (!note && !fileAttachment) return;
+    } else if (!fileAttachment) {
+      return;
+    }
     setIsUploading(true);
-    setUploadStatus("UPLOADING FILE...");
+    setUploadStatus(reply ? "SENDING REPLY..." : "UPLOADING FILE...");
     setShowReSubmitModal(false);
 
-    const selectedOffice = requirements.find(item => item.id === parseInt(activeSelectedItemId));
     const officeName = selectedOffice ? selectedOffice.requirement_name : "Target Office";
 
     const formData = new FormData();
-    formData.append("proof_attachment", fileAttachment);
-    if (notesText) {
-      formData.append("proof_notes", notesText);
+    if (reply) {
+      if (note) formData.append("proof_notes", note);
+      if (fileAttachment) formData.append("file", fileAttachment);
+    } else {
+      formData.append("proof_attachment", fileAttachment);
+      if (note) formData.append("proof_notes", note);
     }
 
-    apiClient.post(`student-clearance-items/${activeSelectedItemId}/upload-proof/`, formData)
+    const endpoint = reply ? "reply" : "upload-proof";
+    apiClient.post(`student-clearance-items/${activeSelectedItemId}/${endpoint}/`, formData)
     .then((response) => {
       const updatedItem = response.data?.data ?? response.data;
-      handleUploadComplete(officeName, updatedItem);
+      handleUploadComplete(officeName, updatedItem, reply);
     })
     .catch((error) => {
       console.error("Failed to upload clearance proof:", error);
@@ -316,6 +351,22 @@ function ClearanceRequest({
               )}
             </div>
 
+            {replyingToIssue && (
+              <p
+                style={{
+                  margin: "0 0 12px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  backgroundColor: "#FCE8E6",
+                  color: "#6d2d2d",
+                  fontSize: "0.84rem",
+                  lineHeight: 1.4,
+                }}
+              >
+                {selectedRawItem?.remarks || "This office flagged an issue on this requirement."}
+              </p>
+            )}
+
             <div
               className={`file-upload-drag-area-aligned${isDragOver ? " is-drag-over" : ""}`}
               onDragEnter={handleDragOver}
@@ -335,16 +386,24 @@ function ClearanceRequest({
                 <span className="upload-main-text-aligned">
                   {fileAttachment ? fileAttachment.name : isDragOver ? "Release to attach this image" : "Drag and drop your image here"}
                 </span>
-                <span className="upload-sub-text-aligned">or click to browse · image files up to 5MB</span>
+                <span className="upload-sub-text-aligned">
+                  {replyingToIssue
+                    ? "Optional. Add a receipt image, or send the reply on its own."
+                    : "or click to browse · image files up to 5MB"}
+                </span>
               </label>
             </div>
 
             <div className="info-item-block-aligned">
-              <label className="info-label-aligned">Reference Number or Transaction Notes (Optional)</label>
+              <label className="info-label-aligned">
+                {replyingToIssue ? "Reply or payment reference" : "Reference Number or Transaction Notes (Optional)"}
+              </label>
               <textarea
                 value={notesText}
                 onChange={(e) => setNotesText(e.target.value)}
-                placeholder="e.g., GCash Reference Number or transaction window identifier logs"
+                placeholder={replyingToIssue
+                  ? "e.g., Paid 150 PHP via GCash Ref #1029384756"
+                  : "e.g., GCash Reference Number or transaction window identifier logs"}
                 className="request-textarea-input-aligned"
               />
             </div>
@@ -354,7 +413,9 @@ function ClearanceRequest({
                 Cancel
               </button>
               <button type="submit" className="submit-request-form-btn-aligned" disabled={isUploading}>
-                {isUploading ? "Uploading..." : "Submit Clearance File"}
+                {isUploading
+                  ? (replyingToIssue ? "Sending..." : "Uploading...")
+                  : (replyingToIssue ? "Send reply and request re-check" : "Submit Clearance File")}
               </button>
             </div>
           </form>
@@ -364,8 +425,12 @@ function ClearanceRequest({
       {showReSubmitModal && (
         <div className="profile-avatar-modal-overlay">
           <div className="profile-avatar-modal-card-box">
-            <h4>Confirm Document Submission</h4>
-            <p>You are about to submit clearance settlement proof details for an office with an active hold or review trail. Are you sure you want to proceed with this file update?</p>
+            <h4>{replyingToIssue ? "Send reply and request re-check" : "Confirm Document Submission"}</h4>
+            <p>
+              {replyingToIssue
+                ? "This sends your reply to the office that flagged the issue and asks them to check the requirement again."
+                : "You are about to submit clearance settlement proof details for an office with an active hold or review trail. Are you sure you want to proceed with this file update?"}
+            </p>
 
             <div className="profile-avatar-modal-actions-row">
               <button type="button" className="submit-request-form-btn-cancel" onClick={() => setShowReSubmitModal(false)}>
@@ -387,10 +452,11 @@ function ClearanceRequest({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="success-modal-icon">✓</div>
-            <h4>Successfully Uploaded</h4>
+            <h4>{successWasReply && !successIncludedFile ? "Reply sent" : "Successfully Uploaded"}</h4>
             <p>
-            Your proof for <strong>{successOfficeName}</strong> was submitted successfully.
-            The latest status will appear on your clearance list.
+            {successWasReply
+              ? <>Your reply for <strong>{successOfficeName}</strong> was sent. The officer was asked to check it again.</>
+              : <>Your proof for <strong>{successOfficeName}</strong> was submitted successfully. The latest status will appear on your clearance list.</>}
             </p>
 
             <div className="profile-avatar-modal-actions-row success-modal-actions">

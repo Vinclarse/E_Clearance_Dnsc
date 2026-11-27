@@ -70,7 +70,7 @@ export default function NotificationMenu({
   };
 
   return (
-    <div className="notif-root" ref={rootRef}>
+    <div className="notif-root" data-notification-root="" ref={rootRef}>
       <button
         type="button"
         className={`notif-trigger${compact ? " notif-trigger--compact" : ""}${open ? " is-open" : ""}`}

@@ -38,6 +38,20 @@ function initialSignatoryPage() {
   return 'SIG1'
 }
 
+function isServerNotificationId(id) {
+  return /^\d+$/.test(String(id))
+}
+
+function mergeNotifications(current, incoming) {
+  const incomingIds = new Set(incoming.map((item) => String(item.id)))
+  const kept = current.filter((item) => !incomingIds.has(String(item.id)))
+  return [...kept, ...incoming]
+}
+
+function markReadLocally(notification) {
+  return { ...notification, is_read: true, unread: false }
+}
+
 function isPastRecord(row) {
   return row.clearanceTypeIsActive === false || row.clearanceOverallStatus === 'completed' || row.status === 'Cleared'
 }
@@ -53,6 +67,7 @@ export default function SignatoryApp() {
   const [metrics, setMetrics] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [notificationError, setNotificationError] = useState('')
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -74,7 +89,9 @@ export default function SignatoryApp() {
       } else {
         setLoadError(records.reason?.message || 'The signatory queue could not be loaded.')
       }
-      if (notes.status === 'fulfilled') setNotifications(notes.value)
+      if (notes.status === 'fulfilled') {
+        setNotifications((current) => mergeNotifications(current, notes.value))
+      }
     }).finally(() => {
       if (isCurrent) setLoading(false)
     })
@@ -110,17 +127,29 @@ export default function SignatoryApp() {
   const markNotificationAsRead = (id) => {
     setNotifications((current) =>
       current.map((notification) =>
-        notification.id === id ? { ...notification, unread: false } : notification,
+        notification.id === id ? markReadLocally(notification) : notification,
       ),
     )
+    if (!isServerNotificationId(id)) return
     markNotificationRead(id).catch(() => {})
   }
 
-  const markAllNotificationsAsRead = () => {
-    setNotifications((current) =>
-      current.map((notification) => ({ ...notification, unread: false })),
-    )
-    markAllNotificationsRead().catch(() => {})
+  const markAllNotificationsAsRead = async () => {
+    setNotificationError('')
+    let serverIds = []
+    setNotifications((current) => {
+      serverIds = current.filter((notification) => isServerNotificationId(notification.id)).map((notification) => notification.id)
+      return current.map(markReadLocally)
+    })
+    if (serverIds.length === 0) return
+    try {
+      await markAllNotificationsRead()
+    } catch {
+      const results = await Promise.allSettled(serverIds.map((id) => markNotificationRead(id)))
+      if (results.some((result) => result.status === 'rejected')) {
+        setNotificationError('Could not mark notifications as read. Please try again.')
+      }
+    }
   }
 
   const updateStudent = async (id, updates) => {
@@ -259,6 +288,7 @@ export default function SignatoryApp() {
       onSelectPage={setActivePage}
       profile={profile}
       notifications={notifications}
+      notificationError={notificationError}
       onMarkNotificationRead={markNotificationAsRead}
       onMarkAllNotificationsRead={markAllNotificationsAsRead}
       onSignOut={signOut}

@@ -187,7 +187,7 @@ function MainContent({ requirements, onUploadProof, onRemoveProof }) {
                   disabled={isLocked}
                   title={isLocked ? `Complete step ${stepNumber - 1} first` : undefined}
                 >
-                  {isLocked ? "Complete earlier steps first" : "Upload proof of settlement"}
+                  {isLocked ? "Complete earlier steps first" : "Reply and request re-check"}
                   {!isLocked && <span aria-hidden="true">→</span>}
                 </button>
               </article>
