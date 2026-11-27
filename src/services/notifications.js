@@ -13,23 +13,45 @@ export async function fetchNotifications() {
     throw new Error("The notifications API returned an unexpected response.");
   }
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   return items.map((item) => {
     const type = String(item.type ?? "").toLowerCase();
-    const style = /issue|rejected/.test(type)
+    const style = /issue|rejected|deficien/.test(type)
       ? "danger"
-      : /cleared|completed|approved/.test(type)
+      : /cleared|completed|approved|valid/.test(type)
         ? "success"
         : "info";
-    const createdAt = new Date(item.created_at);
+    const createdAt = item.created_at ? new Date(item.created_at) : null;
+    const validDate = createdAt && !Number.isNaN(createdAt.getTime());
+    const title = item.title || "Notification";
+    const desc = item.message_preview || "";
+    const isRead = Boolean(item.is_read);
 
     return {
       id: item.id,
+      title,
+      desc,
       text: [item.title, item.message_preview].filter(Boolean).join(": "),
       type: style,
-      time: Number.isNaN(createdAt.getTime()) ? "" : createdAt.toLocaleString(),
-      is_read: Boolean(item.is_read),
+      time: validDate
+        ? createdAt.toLocaleString("en-PH", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : "",
+      group: validDate && createdAt >= startOfToday ? "TODAY" : "EARLIER",
+      is_read: isRead,
+      unread: !isRead,
     };
   });
+}
+
+export function markNotificationRead(id) {
+  return apiClient.get(`notifications/${id}/`);
 }
 
 export function markAllNotificationsRead() {

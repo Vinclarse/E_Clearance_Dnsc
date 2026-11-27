@@ -3,8 +3,11 @@ import { useEffect, useRef } from "react";
 export function useDismissOnOutside(open, onDismiss, ...refs) {
   const refsRef = useRef(refs);
   const dismissRef = useRef(onDismiss);
-  refsRef.current = refs;
-  dismissRef.current = onDismiss;
+
+  useEffect(() => {
+    refsRef.current = refs;
+    dismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     if (!open) return undefined;

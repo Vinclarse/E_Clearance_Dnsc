@@ -22,7 +22,7 @@
 .dashboard-container .navigation-card {
   flex: 1;
   height: 54px;
-  background-color: var(--primary-green);
+  background-color: #2d3a1e;
   border-radius: 999px;
 
   display: flex;
@@ -82,8 +82,7 @@
 
 .dashboard-container .active-link {
   color: white;
-  background-color: rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+  background-color: #4a5e30;
   font-weight: 600;
 }
 
@@ -614,13 +613,26 @@
   .dashboard-container .mobile-top-bar {
     width: 100%;
     box-sizing: border-box;
+    justify-content: space-between;
     margin: 6px 0;
     padding: 0 12px;
   }
 
+  .dashboard-container .mobile-top-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dashboard-container .mobile-brand-info {
+    min-width: 0;
+    overflow: hidden;
+  }
+
   .dashboard-container .mobile-brand-info h2 {
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dashboard-container .mobile-profile-pill .profile-identity {
@@ -628,7 +640,7 @@
   }
 
   .dashboard-container .mobile-brand-info p {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
 
   /* Bottom bar: respects the iPhone home indicator */
@@ -723,113 +735,4 @@
     right: 12px !important;
     z-index: 1000 !important;
   }
-}
-
-.account-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 280px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8e6df;
-  z-index: 1000;
-  overflow: hidden;
-}
-
-.account-menu-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: #f9f8f5;
-  border-bottom: 1px solid #e8e6df;
-}
-
-.account-menu-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #2d3a1e;
-  color: #fff;
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.account-menu-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.account-menu-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.account-menu-name {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1a2010;
-}
-
-.account-menu-email {
-  margin: 0;
-  font-size: 11px;
-  color: #6b7560;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 180px;
-}
-
-.account-menu-role {
-  display: inline-block;
-  width: fit-content;
-  margin-top: 3px;
-  background: rgba(45, 58, 30, 0.1);
-  color: #2d3a1e;
-  border-radius: 999px;
-  padding: 2px 9px;
-  font-size: 9.5px;
-  font-weight: 700;
-}
-
-.account-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 12px 16px;
-  border: 0;
-  background: none;
-  color: #1a2010;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-}
-
-.account-menu-item:hover {
-  background: #f5f4ef;
-}
-
-.account-menu-item--danger {
-  color: #c43a3a;
-  border-top: 1px solid #e8e6df;
-}
-
-.account-menu-item--danger:hover {
-  background: #fff5f5;
-  color: #a02a2a;
 }

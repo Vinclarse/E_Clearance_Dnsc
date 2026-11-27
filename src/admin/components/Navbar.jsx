@@ -1,9 +1,15 @@
-import { useState, useRef, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { Bell, User, Settings, LogOut, Menu, X, LayoutDashboard, FileText, Users, BadgeCheck, ScrollText } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Menu, X, LayoutDashboard, FileText, Users, BadgeCheck, ScrollText } from "lucide-react";
 import eclearanceLogo from "../../assets/eclearance-logo.png";
+import AccountMenu from "../../components/AccountMenu.jsx";
+import NotificationMenu from "../../components/NotificationMenu.jsx";
 import { signOut } from "../../services/auth.js";
-import { fetchNotifications, markAllNotificationsRead } from "../../services/notifications.js";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "../../services/notifications.js";
 import { fetchCurrentAdmin, fetchUnreadCount } from "../services/dashboardApi.js";
 import { requestPortalRefresh, subscribeAccount, subscribePortalRefresh } from "../../services/portalRefresh.js";
 import { useDismissOnOutside } from "../../services/useDismissOnOutside.js";
@@ -18,29 +24,26 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [showMenu,   setShowMenu]   = useState(false);
-  const [navOpen,    setNavOpen]    = useState(false);
-  const [menuPos,    setMenuPos]    = useState({ top: 0, right: 0 });
+  const navigate = useNavigate();
+  const [showMenu, setShowMenu] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
-  const [notices,    setNotices]    = useState([]);
-  const [showNotes,  setShowNotes]  = useState(false);
+  const [notices, setNotices] = useState([]);
+  const [showNotes, setShowNotes] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
-  const [noteError,  setNoteError]  = useState("");
-  const [profile,    setProfile]    = useState(null);
-  const triggerRef                  = useRef(null);
-  const dropdownRef                 = useRef(null);
-  const desktopBellRef              = useRef(null);
-  const desktopNotesRef             = useRef(null);
-  const mobileBellRef               = useRef(null);
-  const mobileNotesRef              = useRef(null);
-  const { pathname }                = useLocation();
+  const [noteError, setNoteError] = useState("");
+  const [profile, setProfile] = useState(null);
+  const desktopProfileRef = useRef(null);
+  const mobileProfileRef = useRef(null);
+
   useDismissOnOutside(
-    showNotes,
-    () => setShowNotes(false),
-    desktopBellRef,
-    desktopNotesRef,
-    mobileBellRef,
-    mobileNotesRef,
+    showMenu || showAccount,
+    () => {
+      setShowMenu(false);
+      setShowAccount(false);
+    },
+    desktopProfileRef,
+    mobileProfileRef,
   );
 
   useEffect(() => {
@@ -65,10 +68,6 @@ export default function Navbar() {
     };
   }, []);
 
-  useEffect(() => {
-    setShowNotes(false);
-  }, [pathname]);
-
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   const displayName = fullName || profile?.username || "Administrator";
   const roleName = Array.isArray(profile?.groups) && profile.groups.length
@@ -80,262 +79,237 @@ export default function Navbar() {
   const avatarUrl = [profile?.profile_url, profile?.profile].find((value) => typeof value === "string" && value.startsWith("http"));
   const initials = displayName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "A";
 
+  function handleMarkNoticeRead(id) {
+    let decremented = false;
+    setNotices((items) =>
+      items.map((item) => {
+        if (item.id !== id) return item;
+        if (item.unread || item.is_read === false) decremented = true;
+        return { ...item, is_read: true, unread: false };
+      }),
+    );
+    if (decremented) {
+      setNotifCount((count) => Math.max(0, count - 1));
+    }
+    markNotificationRead(id).catch(() => {});
+  }
+
   async function handleMarkNotesRead() {
     setNoteError("");
     try {
       await markAllNotificationsRead();
-      setNotices((items) => items.map((item) => ({ ...item, is_read: true })));
+      setNotices((items) => items.map((item) => ({ ...item, is_read: true, unread: false })));
       setNotifCount(0);
     } catch (error) {
       setNoteError(error?.message || "Could not mark notifications as read.");
     }
   }
 
-  /* ── Open / close ── */
-  function handleTrigger() {
-    if (!showMenu && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-    }
-    setShowMenu((v) => !v);
+  function closePopovers() {
+    setShowNotes(false);
+    setShowMenu(false);
+    setShowAccount(false);
   }
 
-  /* ── Close on outside click ── */
-  useEffect(() => {
-    function onOutside(e) {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-        triggerRef.current  && !triggerRef.current.contains(e.target)
-      ) setShowMenu(false);
-    }
-    if (showMenu) document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [showMenu]);
-
-  /* ── Reposition on resize / scroll ── */
-  useEffect(() => {
-    function reposition() {
-      if (showMenu && triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-      }
-    }
-    window.addEventListener("resize", reposition);
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
-  }, [showMenu]);
+  function handleNavigate(path) {
+    closePopovers();
+    setNavOpen(false);
+    navigate(path);
+  }
 
   function handleLogout() {
     localStorage.removeItem("admin_user");
-    setShowMenu(false);
+    closePopovers();
     signOut();
   }
 
   return (
     <>
-    <div className="portal-mobile-top">
-      <button type="button" className="portal-mobile-brand" aria-label="Refresh" onClick={() => { setShowAccount(false); setShowNotes(false); requestPortalRefresh(); }}>
-        <img src={eclearanceLogo} alt="" />
-        <span>
-          <strong>ClearanceDNSC</strong>
-          <small>Admin Portal</small>
-        </span>
-      </button>
-      <div className="portal-mobile-actions">
+      <div className="portal-mobile-top">
         <button
           type="button"
-          ref={mobileBellRef}
-          className="portal-mobile-bell"
-          data-notification-toggle=""
-          aria-label="Notifications"
-          aria-expanded={showNotes}
-          onClick={() => { setShowNotes((open) => !open); setShowAccount(false); }}
+          className="portal-mobile-brand"
+          aria-label="Refresh"
+          onClick={() => {
+            closePopovers();
+            requestPortalRefresh();
+          }}
         >
-          <Bell size={18} />
-          {notifCount > 0 && <span className="nb-bell-badge">{notifCount}</span>}
+          <img src={eclearanceLogo} alt="" />
+          <span>
+            <strong>Davao del Norte State College</strong>
+            <small>Admin portal</small>
+          </span>
         </button>
-        <button
-          type="button"
-          className="portal-mobile-profile"
-          aria-label="Open account menu"
-          aria-expanded={showAccount}
-          onClick={() => { setShowAccount((open) => !open); setShowNotes(false); }}
-        >
-          {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initials}</span>}
-          <small>▾</small>
-        </button>
-      </div>
-      {showNotes && (
-        <div className="portal-mobile-panel" ref={mobileNotesRef} role="dialog" aria-label="Notifications">
-          <div className="portal-mobile-panel-head">
-            <strong>Notifications</strong>
-            <button type="button" onClick={handleMarkNotesRead}>Mark all read</button>
+
+        <div className="portal-mobile-actions">
+          <NotificationMenu
+            compact
+            notifications={notices}
+            unreadCount={notifCount}
+            open={showNotes}
+            onToggle={() => {
+              setShowNotes((open) => !open);
+              setShowAccount(false);
+            }}
+            onClose={() => setShowNotes(false)}
+            onMarkRead={handleMarkNoticeRead}
+            onMarkAllRead={handleMarkNotesRead}
+            error={noteError}
+            emptyHint="System notifications and clearance activity updates will appear here."
+          />
+
+          <div className="nb-profile-wrap" ref={mobileProfileRef}>
+            <button
+              type="button"
+              className="portal-mobile-profile"
+              aria-label="Open account menu"
+              aria-expanded={showAccount}
+              onClick={() => {
+                setShowAccount((open) => !open);
+                setShowNotes(false);
+              }}
+            >
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initials}</span>}
+              <small>▾</small>
+            </button>
+
+            {showAccount && (
+              <AccountMenu
+                avatarUrl={avatarUrl}
+                initials={initials}
+                displayName={displayName}
+                email={email || "Signed-in administrator"}
+                roleName={roleName}
+                onProfile={() => handleNavigate("/profile")}
+                onSettings={() => handleNavigate("/settings")}
+                onLogout={handleLogout}
+              />
+            )}
           </div>
-          {noteError && <p>{noteError}</p>}
-          {notices.length === 0 ? <p>No notifications to display.</p> : notices.slice(0, 8).map((notice) => (
-            <article key={notice.id}>
-              <p>{notice.text}</p>
-              <small>{notice.time}</small>
-            </article>
-          ))}
         </div>
-      )}
-      {showAccount && (
-        <div className="portal-mobile-panel portal-mobile-account">
-          <p>{displayName}</p>
-          <small>{email || roleName}</small>
-          <NavLink to="/profile" onClick={() => setShowAccount(false)}>My Profile</NavLink>
-          <NavLink to="/settings" onClick={() => setShowAccount(false)}>Settings</NavLink>
-          <button type="button" onClick={handleLogout}>Sign Out</button>
-        </div>
-      )}
-    </div>
-    <nav className="portal-mobile-bottom" aria-label="Admin">
-      {navLinks.map((link) => {
-        const Icon = link.icon;
-        return (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.to === "/"}
-            className={({ isActive }) => "portal-mobile-tab" + (isActive ? " active" : "")}
-          >
-            <Icon size={20} strokeWidth={1.8} />
-            <span>{link.short}</span>
-          </NavLink>
-        );
-      })}
-    </nav>
-    <div className="nb-wrapper">
+      </div>
 
-      {/* ── SECTION 1: Brand (white card — far left, OUTSIDE dark pill) ── */}
-      <button type="button" className="nb-brand" aria-label="Refresh" onClick={requestPortalRefresh}>
-        <div className="nb-logo">
-          <img src={eclearanceLogo} alt="" className="nb-logo-img" />
-        </div>
-        <div className="nb-brand-text">
-          <span className="nb-brand-name">Davao del Norte State College</span>
-          <span className="nb-brand-sub">{brandSub}</span>
-        </div>
-      </button>
-
-      <button
-        type="button"
-        className="nb-menu-btn"
-        aria-label={navOpen ? "Close menu" : "Open menu"}
-        aria-expanded={navOpen}
-        onClick={() => setNavOpen((open) => !open)}
-      >
-        {navOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
-
-      {/* ── SECTION 2: Dark pill — nav links only ── */}
-      <nav className={"nb-pill" + (navOpen ? " nb-pill--open" : "")}>
-        <ul className="nb-nav">
-          {navLinks.map((link) => (
-            <li key={link.to}>
-              <NavLink
-                to={link.to}
-                end={link.to === "/"}
-                className={({ isActive }) => "nb-link" + (isActive ? " nb-link--active" : "")}
-                onClick={() => setNavOpen(false)}
-              >
-                {link.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+      <nav className="portal-mobile-bottom" aria-label="Admin">
+        {navLinks.map((link) => {
+          const Icon = link.icon;
+          return (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.to === "/"}
+              className={({ isActive }) => "portal-mobile-tab" + (isActive ? " active" : "")}
+              onClick={closePopovers}
+            >
+              <Icon size={20} strokeWidth={1.8} />
+              <span>{link.short}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
-      {/* ── SECTION 3: Bell — standalone circle ── */}
-      <button
-        type="button"
-        ref={desktopBellRef}
-        className="nb-bell"
-        data-notification-toggle=""
-        aria-label="Notifications"
-        aria-expanded={showNotes}
-        onClick={() => { setShowNotes((open) => !open); setShowMenu(false); }}
-      >
-        <Bell size={16} strokeWidth={1.8} />
-        {notifCount > 0 && (
-          <span className="nb-bell-badge">{notifCount}</span>
-        )}
-      </button>
-      {showNotes && (
-        <div className="nb-note-panel" ref={desktopNotesRef} role="dialog" aria-label="Notifications">
-          <div className="portal-mobile-panel-head">
-            <strong>Notifications</strong>
-            <button type="button" onClick={handleMarkNotesRead}>Mark all read</button>
-          </div>
-          {noteError && <p>{noteError}</p>}
-          {notices.length === 0 ? <p>No notifications to display.</p> : notices.slice(0, 8).map((notice) => (
-            <article key={notice.id}>
-              <p>{notice.text}</p>
-              <small>{notice.time}</small>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {/* ── SECTION 4: Profile pill — far right ── */}
-      <button
-        ref={triggerRef}
-        className={"nb-profile" + (showMenu ? " nb-profile--open" : "")}
-        onClick={handleTrigger}
-        aria-expanded={showMenu}
-      >
-        {/* Avatar circle */}
-        <div className="nb-avatar">
-          {avatarUrl ? <img src={avatarUrl} alt="" /> : <span className="nb-avatar-initials">{initials}</span>}
-        </div>
-        {/* Name + role */}
-        <div className="nb-user-text">
-          <span className="nb-user-name">{displayName}</span>
-          <span className="nb-user-role">{roleName}</span>
-        </div>
-        {/* Triangle caret ▼ */}
-        <span className={"nb-caret" + (showMenu ? " nb-caret--up" : "")}>▾</span>
-      </button>
-
-      {/* ── Dropdown (fixed, escapes stacking context) ── */}
-      {showMenu && (
-        <div
-          ref={dropdownRef}
-          className="nb-dropdown"
-          style={{ top: menuPos.top, right: menuPos.right }}
+      <div className="nb-wrapper">
+        {/* ── SECTION 1: Brand ── */}
+        <button
+          type="button"
+          className="nb-brand"
+          aria-label="Refresh"
+          onClick={() => {
+            closePopovers();
+            requestPortalRefresh();
+          }}
         >
-          <div className="nb-dd-header">
-            <div className="nb-dd-avatar-lg">
+          <div className="nb-logo">
+            <img src={eclearanceLogo} alt="" className="nb-logo-img" />
+          </div>
+          <div className="nb-brand-text">
+            <span className="nb-brand-name">Davao del Norte State College</span>
+            <span className="nb-brand-sub">{brandSub}</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="nb-menu-btn"
+          aria-label={navOpen ? "Close menu" : "Open menu"}
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen((open) => !open)}
+        >
+          {navOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+
+        {/* ── SECTION 2: Dark pill — nav links ── */}
+        <nav className={"nb-pill" + (navOpen ? " nb-pill--open" : "")}>
+          <ul className="nb-nav">
+            {navLinks.map((link) => (
+              <li key={link.to}>
+                <NavLink
+                  to={link.to}
+                  end={link.to === "/"}
+                  className={({ isActive }) => "nb-link" + (isActive ? " nb-link--active" : "")}
+                  onClick={() => {
+                    closePopovers();
+                    setNavOpen(false);
+                  }}
+                >
+                  {link.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ── SECTION 3: Unified Bell ── */}
+        <NotificationMenu
+          notifications={notices}
+          unreadCount={notifCount}
+          open={showNotes}
+          onToggle={() => {
+            setShowNotes((open) => !open);
+            setShowMenu(false);
+          }}
+          onClose={() => setShowNotes(false)}
+          onMarkRead={handleMarkNoticeRead}
+          onMarkAllRead={handleMarkNotesRead}
+          error={noteError}
+          emptyHint="System notifications and clearance activity updates will appear here."
+        />
+
+        {/* ── SECTION 4: Profile pill & Unified AccountMenu ── */}
+        <div className="nb-profile-wrap" ref={desktopProfileRef}>
+          <button
+            type="button"
+            className={"nb-profile" + (showMenu ? " nb-profile--open" : "")}
+            onClick={() => {
+              setShowMenu((open) => !open);
+              setShowNotes(false);
+            }}
+            aria-expanded={showMenu}
+          >
+            <div className="nb-avatar">
               {avatarUrl ? <img src={avatarUrl} alt="" /> : <span className="nb-avatar-initials">{initials}</span>}
             </div>
-            <div className="nb-dd-info">
-              <p className="nb-dd-name">{displayName}</p>
-              <p className="nb-dd-email">{email || "Signed-in administrator"}</p>
-              <span className="nb-dd-role-badge">{roleName}</span>
+            <div className="nb-user-text">
+              <span className="nb-user-name">{displayName}</span>
+              <span className="nb-user-role">{roleName}</span>
             </div>
-          </div>
-
-          <div className="nb-dd-divider" />
-
-          <NavLink to="/profile" className="nb-dd-item" onClick={() => setShowMenu(false)}>
-            <User size={14} /> My Profile
-          </NavLink>
-          <NavLink to="/settings" className="nb-dd-item" onClick={() => setShowMenu(false)}>
-            <Settings size={14} /> Settings
-          </NavLink>
-
-          <div className="nb-dd-divider" />
-
-          <button className="nb-dd-item nb-dd-item--danger" onClick={handleLogout}>
-            <LogOut size={14} /> Logout
+            <span className={"nb-caret" + (showMenu ? " nb-caret--up" : "")}>▾</span>
           </button>
+
+          {showMenu && (
+            <AccountMenu
+              avatarUrl={avatarUrl}
+              initials={initials}
+              displayName={displayName}
+              email={email || "Signed-in administrator"}
+              roleName={roleName}
+              onProfile={() => handleNavigate("/profile")}
+              onSettings={() => handleNavigate("/settings")}
+              onLogout={handleLogout}
+            />
+          )}
         </div>
-      )}
-    </div>
+      </div>
     </>
   );
 }

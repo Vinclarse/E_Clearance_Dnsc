@@ -494,56 +494,9 @@
   color: #1a2810;
 }
 
-.nb-note-panel,
-.portal-mobile-panel {
-  position: absolute;
-  top: 72px;
-  right: 24px;
-  width: min(340px, calc(100vw - 24px));
-  background: #fff;
-  border: 1px solid #e2e4d8;
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-  z-index: 300;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 60vh;
-  overflow: auto;
-}
-
-.portal-mobile-panel-head,
-.nb-note-panel article,
-.portal-mobile-panel article {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.nb-note-panel p,
-.portal-mobile-panel p {
-  margin: 0;
-  font-size: 13px;
-  color: #1a2010;
-}
-
-.nb-note-panel small,
-.portal-mobile-panel small {
-  color: #6b7560;
-  font-size: 11px;
-}
-
-.portal-mobile-panel-head button,
-.portal-mobile-account button,
-.portal-mobile-account a {
-  border: 0;
-  background: none;
-  color: #2d3a1e;
-  font-weight: 600;
-  font-size: 13px;
-  text-align: left;
-  padding: 6px 0;
+.nb-profile-wrap {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .portal-mobile-top,
@@ -572,6 +525,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 1;
     min-width: 0;
     background: none;
     border: 0;
@@ -580,6 +534,11 @@
     color: inherit;
     text-align: left;
     cursor: pointer;
+  }
+
+  .portal-mobile-brand > span {
+    min-width: 0;
+    overflow: hidden;
   }
 
   .portal-mobile-brand img,
@@ -596,6 +555,7 @@
     height: 40px;
     border-radius: 0;
     object-fit: contain;
+    flex-shrink: 0;
   }
 
   .portal-mobile-profile span {
@@ -612,13 +572,16 @@
   }
 
   .portal-mobile-brand strong {
-    font-size: 1.05rem;
+    font-size: 0.88rem;
     line-height: 1.2;
     color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .portal-mobile-brand small {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #7a7a7a;
   }
 
@@ -626,9 +589,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
   }
 
-  .portal-mobile-bell,
   .portal-mobile-profile {
     height: 42px;
     border: 0;
@@ -637,24 +600,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .portal-mobile-bell {
-    width: 42px;
-    border-radius: 50%;
-    position: relative;
-    color: #333;
-  }
-
-  .portal-mobile-profile {
     border-radius: 999px;
     padding: 0 10px 0 4px;
     gap: 8px;
-  }
-
-  .portal-mobile-panel {
-    top: 52px;
-    right: 0;
   }
 
   .portal-mobile-bottom {

@@ -1,5 +1,4 @@
-import { LogOut, User } from "lucide-react";
-import "../styles/navigation.css";
+import { LogOut, Settings, User } from "lucide-react";
 
 export default function AccountMenu({
   avatarUrl,
@@ -8,6 +7,7 @@ export default function AccountMenu({
   email,
   roleName,
   onProfile,
+  onSettings,
   onLogout,
 }) {
   return (
@@ -25,6 +25,11 @@ export default function AccountMenu({
       <button type="button" className="account-menu-item" role="menuitem" onClick={onProfile}>
         <User size={14} /> My Profile
       </button>
+      {onSettings && (
+        <button type="button" className="account-menu-item" role="menuitem" onClick={onSettings}>
+          <Settings size={14} /> Settings
+        </button>
+      )}
       <button type="button" className="account-menu-item account-menu-item--danger" role="menuitem" onClick={onLogout}>
         <LogOut size={14} /> Logout
       </button>
