@@ -16,6 +16,7 @@ export function useDismissOnOutside(open, onDismiss, ...refs) {
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (refsRef.current.some((ref) => ref.current?.contains(target))) return;
+      if (target instanceof Element && target.closest("[data-notification-root]")) return;
       dismissRef.current();
       function swallowBellClick(clickEvent) {
         const clickTarget = clickEvent.target;

@@ -61,6 +61,7 @@ export default function SignatoryLayout({
   onSelectPage,
   profile,
   notifications,
+  notificationError = "",
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
   onSignOut,
@@ -73,7 +74,7 @@ export default function SignatoryLayout({
   const mobileProfileRef = useRef(null);
   useDismissOnOutside(showProfileMenu, () => setShowProfileMenu(false), desktopProfileRef, mobileProfileRef);
 
-  const unreadCount = notifications.filter((notification) => notification.unread).length;
+  const unreadCount = notifications.filter((notification) => Boolean(notification.unread ?? (notification.is_read === false))).length;
   const profileInitials = `${profile.firstName?.[0] ?? ""}${profile.lastName?.[0] ?? ""}`.toUpperCase() || "SG";
 
   const handleSelectPage = (pageId) => {
@@ -121,6 +122,7 @@ export default function SignatoryLayout({
             onClose={() => setShowNotifications(false)}
             onMarkRead={onMarkNotificationRead}
             onMarkAllRead={onMarkAllNotificationsRead}
+            error={notificationError}
             emptyHint="You will be notified here once someone submits an approval request or clearance proof."
           />
 
@@ -283,6 +285,7 @@ export default function SignatoryLayout({
             onClose={() => setShowNotifications(false)}
             onMarkRead={onMarkNotificationRead}
             onMarkAllRead={onMarkAllNotificationsRead}
+            error={notificationError}
             emptyHint="You will be notified here once someone submits an approval request or clearance proof."
           />
 

@@ -331,10 +331,13 @@ function StudentDashboard() {
     );
   };
 
-  const triggerUploadNotification = (officeName) => {
+  const triggerUploadNotification = (officeName, details) => {
+    const reply = Boolean(details?.reply);
     setCustomNotification({
       id: `upload-event-${Date.now()}`,
-      text: `Your settlement proof file for ${officeName} has been submitted successfully and is under review.`,
+      text: reply
+        ? `Your reply for ${officeName} was sent. The officer was asked to check it again.`
+        : `Your settlement proof file for ${officeName} has been submitted successfully and is under review.`,
       type: "info",
       time: "Just now"
     });

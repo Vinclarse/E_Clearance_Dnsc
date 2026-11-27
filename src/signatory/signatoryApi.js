@@ -365,19 +365,22 @@ export async function fetchSignatoryNotifications() {
   const response = await apiClient.get("notifications/", {
     params: { per_page: 30, current_page: 1, source: "clearance" },
   });
-  return collect(unwrapEnvelope(response)).map((notice) => {
+  const page = readPage(unwrapEnvelope(response));
+  return page.items.map((notice) => {
     const created = notice.created_at ? new Date(notice.created_at) : null;
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
+    const isRead = notice.is_read === true;
     return {
       id: notice.id,
       title: notice.title || "Notification",
-      desc: notice.message_preview || "",
+      desc: notice.message_preview || notice.message || "",
       time: created
         ? created.toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
         : "",
       group: created && created >= startOfToday ? "TODAY" : "EARLIER",
-      unread: notice.is_read === false,
+      is_read: isRead,
+      unread: !isRead,
     };
   });
 }
@@ -387,7 +390,7 @@ export async function markNotificationRead(id) {
 }
 
 export async function markAllNotificationsRead() {
-  await apiClient.post("notifications/mark-all-read/", {});
+  await apiClient.post("notifications/mark-all-read/");
 }
 
 export function signatoryErrorMessage(error, fallback = "The clearance record could not be updated.") {
