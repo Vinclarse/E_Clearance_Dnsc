@@ -38,6 +38,7 @@ function ClearanceRequest({
   const [showReSubmitModal, setShowReSubmitModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [officeMenuOpen, setOfficeMenuOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // NEW: success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -83,25 +84,50 @@ function ClearanceRequest({
     onRequestItemHandled?.();
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith("image/")) {
-        setFileAttachment(null);
-        setUploadStatus("CHOOSE AN IMAGE FILE");
-        e.target.value = "";
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setFileAttachment(null);
-        setUploadStatus("FILE EXCEEDS 5MB LIMIT");
-        e.target.value = "";
-        return;
-      }
-
-      setFileAttachment(file);
-      setUploadStatus("READY TO SUBMIT");
+  const acceptProofFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setFileAttachment(null);
+      setUploadStatus("CHOOSE AN IMAGE FILE");
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setFileAttachment(null);
+      setUploadStatus("FILE EXCEEDS 5MB LIMIT");
+      return;
+    }
+    setFileAttachment(file);
+    setUploadStatus("READY TO SUBMIT");
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    acceptProofFile(file);
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      e.target.value = "";
+    }
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+    acceptProofFile(event.dataTransfer?.files?.[0]);
   };
 
   const resetForm = () => {
@@ -111,6 +137,7 @@ function ClearanceRequest({
     onRequestItemHandled?.();
     setUploadStatus("AWAITING SELECTION");
     setShowReSubmitModal(false);
+    setIsDragOver(false);
   };
 
   const handlePreSubmitCheck = (e) => {
@@ -289,7 +316,13 @@ function ClearanceRequest({
               )}
             </div>
 
-            <div className="file-upload-drag-area-aligned">
+            <div
+              className={`file-upload-drag-area-aligned${isDragOver ? " is-drag-over" : ""}`}
+              onDragEnter={handleDragOver}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 id="clearance-file-input"
@@ -300,9 +333,9 @@ function ClearanceRequest({
               <label htmlFor="clearance-file-input" className="file-upload-label-wrapper-aligned">
                 <span className="upload-cloud-icon-aligned">📤</span>
                 <span className="upload-main-text-aligned">
-                  {fileAttachment ? fileAttachment.name : "Drag and drop your image here"}
+                  {fileAttachment ? fileAttachment.name : isDragOver ? "Release to attach this image" : "Drag and drop your image here"}
                 </span>
-                <span className="upload-sub-text-aligned">Supports image files up to 5MB</span>
+                <span className="upload-sub-text-aligned">or click to browse · image files up to 5MB</span>
               </label>
             </div>
 
