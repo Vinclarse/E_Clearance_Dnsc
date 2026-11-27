@@ -21,7 +21,7 @@ export default function SIG3({ students, onUpdateStudent }) {
       || String(student.studentNumber || "").toLowerCase().includes(searchTerm)
       || String(student.id || "").toLowerCase().includes(searchTerm);
     const matchesProgram = selectedProgram === 'All Programs'
-      || student.program === selectedProgram;
+      || String(student.program || '').includes(selectedProgram);
     const matchesYear = selectedYear === 'All years' || String(student.yearLevel) === selectedYear;
     return matchesSearch && matchesProgram && matchesYear;
   });
@@ -157,7 +157,12 @@ export default function SIG3({ students, onUpdateStudent }) {
             </button>
           )}
         >
-          {(expandedColumns.awaiting ? awaitingList : awaitingList.slice(0, 3)).map((item) => (
+          {awaitingList.length === 0 ? (
+            <EmptyColumnNote
+              title="No active deficiencies"
+              detail="Pending students are approved directly in Approval Queue. Only items flagged for a deficiency appear here."
+            />
+          ) : (expandedColumns.awaiting ? awaitingList : awaitingList.slice(0, 3)).map((item) => (
             <div key={item.id} style={{ backgroundColor: '#F5F6EF', border: '1px solid #E2E7DC', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -197,7 +202,12 @@ export default function SIG3({ students, onUpdateStudent }) {
             </button>
           )}
         >
-          {(expandedColumns.ready ? readyList : readyList.slice(0, 3)).map((item) => (
+          {readyList.length === 0 ? (
+            <EmptyColumnNote
+              title="No proofs ready for review"
+              detail="Settlement receipts and documents uploaded by students for review will appear here."
+            />
+          ) : (expandedColumns.ready ? readyList : readyList.slice(0, 3)).map((item) => (
             <div key={item.id} style={{ backgroundColor: '#F5F6EF', border: '1px solid #E2E7DC', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -244,7 +254,12 @@ export default function SIG3({ students, onUpdateStudent }) {
             </button>
           )}
         >
-          {(expandedColumns.resolved ? resolvedList : resolvedList.slice(0, 3)).map((item) => (
+          {resolvedList.length === 0 ? (
+            <EmptyColumnNote
+              title="No proof-based clearances yet"
+              detail="Deficiencies resolved through proof review appear here. Direct queue approvals remain in Approval Queue."
+            />
+          ) : (expandedColumns.resolved ? resolvedList : resolvedList.slice(0, 3)).map((item) => (
             <div key={item.id} style={{ backgroundColor: '#F5F6EF', border: '1px solid #E2E7DC', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -348,6 +363,15 @@ function KanbanCol({ title, sub, badge, color, children, footer }) {
       </div>
       {children}
       {footer}
+    </div>
+  );
+}
+
+function EmptyColumnNote({ title, detail }) {
+  return (
+    <div style={{ backgroundColor: '#F7F8F3', border: '1px dashed #D8DEC9', borderRadius: '14px', padding: '1rem', textAlign: 'center', color: '#6E7866' }}>
+      <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#394632', marginBottom: '0.25rem' }}>{title}</div>
+      <div style={{ fontSize: '0.72rem', lineHeight: 1.4 }}>{detail}</div>
     </div>
   );
 }

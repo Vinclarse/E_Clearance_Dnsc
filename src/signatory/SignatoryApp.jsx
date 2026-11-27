@@ -197,12 +197,24 @@ export default function SignatoryApp() {
   }
   const clearanceCycles = [...cycleMap.values()]
 
+  const isDeficiencyOrProofRecord = (row) =>
+    row.status === 'Deficiency' || row.proofStatus === 'submitted' || row.proofStatus === 'resolved'
+
   const matchesScope = (row) => {
     if (selectedCycleKey !== 'all' && row.clearanceCycleKey !== selectedCycleKey) return false
     if (clearanceScope === 'active') return !isPastRecord(row)
     if (clearanceScope === 'past') return isPastRecord(row)
     return true
   }
+
+  const cycleScoped = (rows) =>
+    selectedCycleKey === 'all' ? rows : rows.filter((row) => row.clearanceCycleKey === selectedCycleKey)
+
+  const scopeSource = activePage === 'SIG5'
+    ? cycleScoped(cohort)
+    : activePage === 'SIG3'
+      ? cycleScoped(students.filter(isDeficiencyOrProofRecord))
+      : cycleScoped(students)
 
   const isFiltered = clearanceScope !== 'all' || selectedCycleKey !== 'all'
   const visibleStudents = isFiltered ? students.filter(matchesScope) : students
@@ -290,9 +302,9 @@ export default function SignatoryApp() {
             <div className="clearance-cycle-bar clearance-cycle-bar--signatory">
               <div role="group" aria-label="Filter by clearance status" className="clearance-cycle-pills">
                 {[
-                  { id: 'all', label: `All (${students.length})` },
-                  { id: 'active', label: `Active (${students.filter((row) => !isPastRecord(row)).length})` },
-                  { id: 'past', label: `Past / Cleared (${students.filter((row) => isPastRecord(row)).length})` },
+                  { id: 'all', label: `All (${scopeSource.length})` },
+                  { id: 'active', label: `Active (${scopeSource.filter((row) => !isPastRecord(row)).length})` },
+                  { id: 'past', label: `Past / Cleared (${scopeSource.filter((row) => isPastRecord(row)).length})` },
                 ].map((option) => {
                   const selected = clearanceScope === option.id
                   return (
