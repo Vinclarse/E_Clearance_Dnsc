@@ -653,8 +653,22 @@
   }
 
   .portal-mobile-panel {
-    top: 52px;
-    right: 0;
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    z-index: 1001;
+  }
+
+  .portal-mobile-panel article {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .portal-mobile-panel p,
+  .portal-mobile-panel small {
+    overflow-wrap: anywhere;
   }
 
   .portal-mobile-bottom {

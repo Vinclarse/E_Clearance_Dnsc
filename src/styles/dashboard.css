@@ -2667,9 +2667,28 @@ width: 100% !important;
     color: var(--primary-green);
   }
 
-  .dashboard-container .mobile-modal {
-    right: -45px !important;
-    max-width: min(320px, calc(100vw - 24px)) !important;
+  .dashboard-container .notification-modal.mobile-modal {
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    z-index: 1001 !important;
+  }
+
+  .dashboard-container .notification-modal.mobile-modal .notification-modal-header {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .dashboard-container .notification-modal.mobile-modal .notification-modal-header h5,
+  .dashboard-container .notification-modal.mobile-modal .notification-item-card-row p,
+  .dashboard-container .notification-modal.mobile-modal .notification-item-card-row span {
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
   }
 
   .dashboard-container .dashboard-state {
